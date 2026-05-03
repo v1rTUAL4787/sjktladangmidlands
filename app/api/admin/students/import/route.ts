@@ -1,0 +1,63 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma/client";
+import { requireAdmin } from "@/lib/admin/auth";
+import { hashIC, encryptIC } from "@/lib/crypto";
+import * as XLSX from "xlsx";
+
+export async function POST(req: Request) {
+  const auth = await requireAdmin();
+  if (auth instanceof NextResponse) return auth;
+
+  const formData = await req.formData();
+  const file = formData.get("file") as File | null;
+  if (!file) return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const workbook = XLSX.read(buffer, { type: "buffer" });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
+
+  let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  for (const row of rows) {
+    try {
+      const fullName = String(row["fullName"] ?? row["Full Name"] ?? "").trim();
+      const icNumber = String(row["icNumber"] ?? row["IC Number"] ?? "").trim().replace(/-/g, "");
+      const classId = String(row["classId"] ?? row["Class ID"] ?? "").trim();
+      const gender = String(row["gender"] ?? row["Gender"] ?? "").trim().toUpperCase();
+      const rawDob = row["dateOfBirth"] ?? row["Date of Birth"];
+      const enrolledYear = parseInt(String(row["enrolledYear"] ?? row["Enrolled Year"] ?? new Date().getFullYear()));
+
+      if (!fullName || !icNumber || !classId) { errors.push(`Skipped row: missing fullName/icNumber/classId`); skipped++; continue; }
+
+      const hash = hashIC(icNumber);
+      let dob: Date | null = null;
+      if (rawDob) {
+        if (typeof rawDob === "number") dob = new Date(Math.round((rawDob - 25569) * 86400 * 1000));
+        else dob = new Date(String(rawDob));
+      }
+
+      await prisma.student.upsert({
+        where: { icNumberHash: hash },
+        update: { fullName, dateOfBirth: dob, gender: (gender === "MALE" || gender === "FEMALE") ? gender as "MALE" | "FEMALE" : null, classId },
+        create: {
+          fullName,
+          icNumberHash: hash,
+          icNumberEncrypted: encryptIC(icNumber),
+          dateOfBirth: dob,
+          gender: (gender === "MALE" || gender === "FEMALE") ? gender as "MALE" | "FEMALE" : null,
+          classId,
+          enrolledYear: isNaN(enrolledYear) ? new Date().getFullYear() : enrolledYear,
+        },
+      });
+      imported++;
+    } catch (e) {
+      errors.push(`Error on row: ${JSON.stringify(row)} — ${(e as Error).message}`);
+      skipped++;
+    }
+  }
+
+  return NextResponse.json({ imported, skipped, errors });
+}

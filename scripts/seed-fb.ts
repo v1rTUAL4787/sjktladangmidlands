@@ -26,8 +26,8 @@ async function main() {
   console.log("Opening Facebook login page...");
   await page.goto("https://www.facebook.com/login", { waitUntil: "domcontentloaded", timeout: 30000 });
 
-  console.log(">>> LOG IN TO FACEBOOK NOW. You have 60 seconds...");
-  await page.waitForTimeout(60000);
+  console.log(">>> LOG IN TO FACEBOOK NOW. You have 3 minutes...");
+  await page.waitForTimeout(180000);
 
   console.log("Navigating to school page...");
   await page.goto(FB_PAGE_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
