@@ -22,9 +22,9 @@ export default async function HomePage() {
   const announcements = await getAnnouncements();
 
   return (
-    <div className="bg-[#EEF7EE]">
+    <div>
       {/* Hero */}
-      <section className="bg-gradient-to-br from-primary to-primary-700 text-white py-16 px-4">
+      <section className="bg-gradient-to-br from-[#1B3A6B] to-[#0f2240] text-white py-16 px-4">
         <div className="container mx-auto max-w-4xl flex flex-col md:flex-row items-center gap-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="https://saoqnwdydwomigkgjciz.supabase.co/storage/v1/object/public/SJKTPublic/logo%20circle.svg" alt="School Badge" className="h-36 mix-blend-luminosity drop-shadow-lg" />
@@ -45,9 +45,9 @@ export default async function HomePage() {
       </section>
 
       {/* Feed */}
-      <section className="bg-[#EEF7EE] w-full px-4 py-12">
+      <section className="bg-transparent w-full px-4 py-12">
         <div className="container mx-auto max-w-4xl">
-        <h2 className="text-2xl font-bold text-primary mb-6">{t("feed_title")}</h2>
+        <h2 className="text-2xl font-bold text-white mb-6">{t("feed_title")}</h2>
 
         {announcements.length === 0 ? (
           <p className="text-muted-foreground">No announcements yet.</p>
@@ -94,9 +94,9 @@ export default async function HomePage() {
       </section>
 
       {/* Feedback */}
-      <section className="bg-[#d6efd6] py-12 px-4">
+      <section className="bg-transparent py-12 px-4">
         <div className="container mx-auto max-w-xl">
-          <h2 className="text-2xl font-bold text-primary mb-6">{t("feedback_title")}</h2>
+          <h2 className="text-2xl font-bold text-white mb-6">{t("feedback_title")}</h2>
           <FeedbackForm />
         </div>
       </section>

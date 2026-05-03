@@ -18,7 +18,7 @@ export default async function PublicLayout({ children }: { children: React.React
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar user={user} />
-      <main className="flex-1 bg-[#EEF7EE]">{children}</main>
+      <main className="flex-1 bg-gradient-to-b from-[#1B3A6B] to-[#0f2240]">{children}</main>
       <footer className="border-t bg-primary text-primary-foreground py-6 text-center text-sm opacity-80">
         <p>© {new Date().getFullYear()} SJKT Ladang Midlands · polylearn.my</p>
       </footer>
