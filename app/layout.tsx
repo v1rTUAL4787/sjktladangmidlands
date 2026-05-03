@@ -6,7 +6,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "SJKT Ladang Midlands Portal",
   description: "School portal for SJKT Ladang Midlands — parents, teachers, and students.",
-  icons: { icon: "/badge.png" },
+  icons: { icon: "https://saoqnwdydwomigkgjciz.supabase.co/storage/v1/object/public/SJKTPublic/logo%20circle.svg" },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
