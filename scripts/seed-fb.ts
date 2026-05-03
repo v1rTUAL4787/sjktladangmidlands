@@ -12,47 +12,76 @@ async function main() {
   const adminUser = await prisma.user.findFirst({ where: { role: "ADMIN" } });
   if (!adminUser) throw new Error("No admin user found. Seed the admin first via Supabase dashboard.");
 
-  const browser = await chromium.launch({ headless: true });
+  // Launch visible browser so you can solve any login/captcha manually
+  const browser = await chromium.launch({
+    headless: false,
+    args: ["--disable-blink-features=AutomationControlled"],
+  });
   const context = await browser.newContext({
     userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    viewport: { width: 1280, height: 900 },
   });
   const page = await context.newPage();
 
-  await page.goto(FB_PAGE_URL, { waitUntil: "networkidle", timeout: 30000 });
-  await page.waitForTimeout(3000);
+  console.log("Opening Facebook login page...");
+  await page.goto("https://www.facebook.com/login", { waitUntil: "domcontentloaded", timeout: 30000 });
 
-  // Dismiss cookie/login dialogs if present
-  const closeBtn = page.locator('[aria-label="Close"]').first();
-  if (await closeBtn.isVisible()) await closeBtn.click();
+  console.log(">>> LOG IN TO FACEBOOK NOW. You have 60 seconds...");
+  await page.waitForTimeout(60000);
+
+  console.log("Navigating to school page...");
+  await page.goto(FB_PAGE_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.waitForTimeout(5000);
+
+  // Scroll to load posts
+  console.log("Scrolling to load posts...");
+  for (let i = 0; i < Math.ceil(POST_LIMIT / 4); i++) {
+    await page.evaluate(() => window.scrollBy(0, 2000));
+    await page.waitForTimeout(1500);
+  }
+
+  // Try multiple selectors Facebook uses for post text
+  const selectors = [
+    "[data-ad-comet-preview='message']",
+    "[data-ad-preview='message']",
+    "div[dir='auto'] span[dir='auto']",
+    ".xdj266r span",
+  ];
 
   const posts: { text: string; imageUrl: string | null; postId: string; date: Date }[] = [];
 
-  for (let i = 0; i < Math.ceil(POST_LIMIT / 5); i++) {
-    await page.evaluate(() => window.scrollBy(0, 2000));
-    await page.waitForTimeout(2000);
-  }
+  for (const selector of selectors) {
+    const els = await page.locator(selector).all();
+    if (els.length > 0) {
+      console.log(`Found ${els.length} elements with selector: ${selector}`);
 
-  const postEls = await page.locator("[data-ad-comet-preview='message']").all();
+      for (const el of els.slice(0, POST_LIMIT)) {
+        try {
+          const text = (await el.textContent()) ?? "";
+          if (!text.trim() || text.trim().length < 20) continue;
 
-  for (const el of postEls.slice(0, POST_LIMIT)) {
-    try {
-      const text = (await el.textContent()) ?? "";
-      if (!text.trim()) continue;
+          // Try to find image near the post
+          const parent = el.locator("xpath=ancestor::div[5]").first();
+          const imgEl = parent.locator("img[referrerpolicy='origin-when-cross-origin']").first();
+          const imageUrl = await imgEl.getAttribute("src").catch(() => null);
 
-      const parent = el.locator("xpath=ancestor::div[contains(@class,'x1yztbdb')]").first();
-      const imgEl = parent.locator("img[referrerpolicy='origin-when-cross-origin']").first();
-      const imageUrl = (await imgEl.getAttribute("src").catch(() => null)) ?? null;
+          const uniqueId = Buffer.from(text.slice(0, 60)).toString("base64").slice(0, 64);
 
-      const uniqueId = Buffer.from(text.slice(0, 50)).toString("base64");
+          // Avoid duplicates within this run
+          if (posts.find((p) => p.postId === uniqueId)) continue;
 
-      posts.push({
-        text: text.trim(),
-        imageUrl,
-        postId: uniqueId,
-        date: new Date(),
-      });
-    } catch {
-      // skip malformed post
+          posts.push({
+            text: text.trim(),
+            imageUrl: imageUrl ?? null,
+            postId: uniqueId,
+            date: new Date(),
+          });
+        } catch {
+          // skip
+        }
+      }
+
+      if (posts.length > 0) break;
     }
   }
 

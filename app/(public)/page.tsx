@@ -33,7 +33,7 @@ export default async function HomePage() {
             <p className="text-lg opacity-80 mb-2">{t("hero_subtitle")}</p>
             <div className="mt-6 flex gap-3">
               <Button asChild variant="gold" size="lg" className="font-semibold shadow">
-                <Link href="/login">Parent Login</Link>
+                <Link href="/login">{t("login_button")}</Link>
               </Button>
               <Button asChild size="lg"
                 className="bg-[#EEF7EE] text-primary font-semibold hover:bg-[#d6efd6] border border-[#c2e4c2] shadow">
