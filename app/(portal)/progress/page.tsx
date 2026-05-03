@@ -19,7 +19,7 @@ export default async function ProgressPage() {
         include: { students: { include: { student: { include: { class: true } } } } },
       },
       teacherProfile: {
-        include: { classes: { include: { students: true } } },
+        include: { classes: { include: { students: { include: { class: true } } } } },
       },
     },
   });
@@ -41,19 +41,22 @@ export default async function ProgressPage() {
         <p className="text-muted-foreground">{t("no_records")}</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {students.map((student) => (
-            <Link key={student.id} href={`/progress/${student.id}`}>
-              <Card className="hover:border-accent hover:shadow-md transition-all cursor-pointer">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">{student.fullName}</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-muted-foreground flex justify-between">
-                  <span>Std {"class" in student && student.class ? `${student.class.year}${student.class.name}` : "—"}</span>
-                  <Badge variant="secondary">View Progress →</Badge>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+          {students.map((student) => {
+            const cls = (student as { class?: { year: number; name: string } }).class;
+            return (
+              <Link key={student.id} href={`/progress/${student.id}`}>
+                <Card className="hover:border-accent hover:shadow-md transition-all cursor-pointer">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">{student.fullName}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-muted-foreground flex justify-between">
+                    <span>Std {cls ? `${cls.year}${cls.name}` : "—"}</span>
+                    <Badge variant="secondary">View Progress →</Badge>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

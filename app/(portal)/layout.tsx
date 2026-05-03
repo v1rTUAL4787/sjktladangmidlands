@@ -12,14 +12,14 @@ export default async function PortalLayout({ children }: { children: React.React
 
   const dbUser = await prisma.user.findUnique({
     where: { supabaseId: supabaseUser.id },
-    select: { fullName: true, email: true, role: true },
+    select: { id: true, fullName: true, email: true, role: true },
   });
 
   if (!dbUser) redirect("/login");
 
   const parentProfile = dbUser.role === "PARENT"
     ? await prisma.parentProfile.findUnique({
-        where: { user: { supabaseId: supabaseUser.id } },
+        where: { userId: dbUser.id },
         select: { approved: true },
       })
     : null;
