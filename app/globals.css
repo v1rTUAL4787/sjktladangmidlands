@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Sans+Tamil:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 138 40% 96%;   /* pastel green page background */
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --secondary: 138 30% 91%;    /* slightly deeper pastel green for secondary surfaces */
+    --secondary-foreground: 222 47% 11%;
+    --muted: 138 20% 90%;
+    --muted-foreground: 215 16% 47%;
+    --destructive: 350 84% 44%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 138 20% 84%;
+    --input: 138 20% 84%;
+    --ring: 213 60% 26%;
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-surface text-foreground font-sans antialiased;
+  }
+
+  h1, h2, h3 {
+    @apply font-serif;
+  }
+}

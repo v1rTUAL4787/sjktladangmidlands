@@ -1,0 +1,335 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  TEACHER
+  PARENT
+}
+
+enum Lang {
+  EN
+  TA
+  MS
+}
+
+enum SlotType {
+  CONSULTATION
+  CLASS
+  SCHOOL_DUTY
+  BLOCKED
+}
+
+enum ApptStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum AnnSource {
+  MANUAL
+  FB_SEED
+}
+
+enum MediaType {
+  PHOTO
+  VIDEO
+  DOCUMENT
+}
+
+// ---------------------------------------------------------------------------
+// Users
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String   @id @default(uuid())
+  supabaseId    String   @unique
+  email         String   @unique
+  fullName      String
+  role          Role
+  phone         String?
+  preferredLang Lang     @default(EN)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  parentProfile  ParentProfile?
+  teacherProfile TeacherProfile?
+  announcements  Announcement[]
+  mediaUploads   ActivityMedia[]
+}
+
+// ---------------------------------------------------------------------------
+// School Structure
+// ---------------------------------------------------------------------------
+
+model Class {
+  id          String   @id @default(uuid())
+  year        Int
+  name        String
+  academicYear String
+  createdAt   DateTime @default(now())
+
+  classTeacher   TeacherProfile? @relation("ClassTeacher", fields: [classTeacherId], references: [id])
+  classTeacherId String?
+  students       Student[]
+  activities     Activity[]
+
+  @@unique([year, name, academicYear])
+}
+
+model Student {
+  id              String   @id @default(uuid())
+  icNumberHash    String   @unique
+  icNumberEncrypted String
+  fullName        String
+  enrolledYear    Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  class           Class    @relation(fields: [classId], references: [id])
+  classId         String
+
+  parents              ParentStudent[]
+  progressRecords      ProgressRecord[]
+  attendanceRecords    AttendanceRecord[]
+  activitySubmissions  ActivitySubmission[]
+  appointments         Appointment[]
+}
+
+// ---------------------------------------------------------------------------
+// Parent
+// ---------------------------------------------------------------------------
+
+model ParentProfile {
+  id             String   @id @default(uuid())
+  whatsappNumber String
+  approved       Boolean  @default(false)
+  approvedAt     DateTime?
+  createdAt      DateTime @default(now())
+
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String @unique
+
+  students     ParentStudent[]
+  appointments Appointment[]
+}
+
+model ParentStudent {
+  relation String
+
+  parent    ParentProfile @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  parentId  String
+  student   Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String
+
+  @@id([parentId, studentId])
+}
+
+// ---------------------------------------------------------------------------
+// Teacher
+// ---------------------------------------------------------------------------
+
+model TeacherProfile {
+  id       String   @id @default(uuid())
+  subjects String[]
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+
+  classes       Class[]         @relation("ClassTeacher")
+  slots         TeacherSlot[]
+  appointments  Appointment[]
+  progressRecords ProgressRecord[]
+  activities    Activity[]
+}
+
+model TeacherSlot {
+  id        String   @id @default(uuid())
+  date      DateTime @db.Date
+  startTime DateTime @db.Time
+  endTime   DateTime @db.Time
+  slotType  SlotType
+  label     String?
+  booked    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  teacher     TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  teacherId   String
+  appointment Appointment?
+}
+
+// ---------------------------------------------------------------------------
+// Appointments
+// ---------------------------------------------------------------------------
+
+model Appointment {
+  id        String     @id @default(uuid())
+  status    ApptStatus @default(PENDING)
+  notes     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  slot      TeacherSlot    @relation(fields: [slotId], references: [id])
+  slotId    String         @unique
+  parent    ParentProfile  @relation(fields: [parentId], references: [id])
+  parentId  String
+  student   Student        @relation(fields: [studentId], references: [id])
+  studentId String
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id])
+  teacherId String
+}
+
+// ---------------------------------------------------------------------------
+// Progress
+// ---------------------------------------------------------------------------
+
+model ProgressRecord {
+  id                String   @id @default(uuid())
+  subject           String
+  term              Int
+  academicYear      Int
+  tpScore           Int?
+  customScore       String?
+  requiredAttention String?
+  actionPlan        String?
+  nextMilestone     String?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  student   Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id])
+  teacherId String
+}
+
+model AttendanceRecord {
+  id        String   @id @default(uuid())
+  date      DateTime @db.Date
+  present   Boolean
+  reason    String?
+
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String
+
+  @@unique([studentId, date])
+}
+
+// ---------------------------------------------------------------------------
+// Announcements (activity feed)
+// ---------------------------------------------------------------------------
+
+model Announcement {
+  id          String    @id @default(uuid())
+  title       String
+  body        String
+  titleTa     String?
+  titleMs     String?
+  bodyTa      String?
+  bodyMs      String?
+  publishedAt DateTime  @default(now())
+  source      AnnSource @default(MANUAL)
+  fbPostId    String?   @unique
+  imageUrl    String?
+  pinned      Boolean   @default(false)
+  tags        String[]
+  createdAt   DateTime  @default(now())
+
+  author   User   @relation(fields: [authorId], references: [id])
+  authorId String
+
+  feedback Feedback[]
+}
+
+model Feedback {
+  id        String   @id @default(uuid())
+  name      String?
+  message   String
+  createdAt DateTime @default(now())
+
+  announcement   Announcement? @relation(fields: [announcementId], references: [id], onDelete: SetNull)
+  announcementId String?
+}
+
+// ---------------------------------------------------------------------------
+// Activities & Gallery
+// ---------------------------------------------------------------------------
+
+model Activity {
+  id                 String    @id @default(uuid())
+  title              String
+  description        String?
+  date               DateTime
+  requiresSubmission Boolean   @default(false)
+  dueDate            DateTime?
+  createdAt          DateTime  @default(now())
+
+  class     Class?         @relation(fields: [classId], references: [id])
+  classId   String?
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id])
+  teacherId String
+
+  submissions ActivitySubmission[]
+  mediaItems  ActivityMedia[]
+}
+
+model ActivitySubmission {
+  id          String   @id @default(uuid())
+  grade       String?
+  feedback    String?
+  submittedAt DateTime @default(now())
+
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  activityId String
+  student    Student  @relation(fields: [studentId], references: [id])
+  studentId  String
+
+  mediaItems ActivityMedia[]
+
+  @@unique([activityId, studentId])
+}
+
+model ActivityMedia {
+  id         String    @id @default(uuid())
+  storageUrl String
+  mediaType  MediaType
+  caption    String?
+  uploadedAt DateTime  @default(now())
+
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id])
+  uploadedById String
+
+  activity     Activity?           @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  activityId   String?
+  submission   ActivitySubmission? @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  submissionId String?
+}
+
+// ---------------------------------------------------------------------------
+// Notifications (in-portal bell fallback)
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}
