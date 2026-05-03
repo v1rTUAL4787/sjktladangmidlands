@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Pencil } from "lucide-react";
+import { Pencil, Upload, RefreshCw } from "lucide-react";
+import { TeacherImportForm, TeacherSyncForm } from "./TeacherImportForm";
 
 interface ClassItem { id: string; year: number; name: string }
 interface TeacherItem {
@@ -93,14 +94,51 @@ function TeacherRoleForm({ teacher, classes, onDone }: { teacher: TeacherItem; c
   );
 }
 
-export function TeachersClient({ teachers, classes }: { teachers: TeacherItem[]; classes: ClassItem[] }) {
+export function TeachersClient({ teachers, classes, academicYear, rosterCount }: {
+  teachers: TeacherItem[];
+  classes: ClassItem[];
+  academicYear: string;
+  rosterCount: number;
+}) {
   const [editItem, setEditItem] = useState<TeacherItem | null>(null);
-  const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [syncOpen, setSyncOpen] = useState(false);
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-primary">Teachers</h1>
-      <p className="text-sm text-muted-foreground">Teachers are added when a user with the TEACHER role registers. Assign their role and class here.</p>
+      <div className="flex flex-wrap justify-between items-center gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-primary">Teachers</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {teachers.length} active · {rosterCount} in roster (pre-registered)
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Dialog open={importOpen} onOpenChange={setImportOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline"><Upload className="h-4 w-4 mr-1" /> Import Excel</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader><DialogTitle>Import Teachers from Excel</DialogTitle></DialogHeader>
+              <TeacherImportForm academicYear={academicYear} onDone={() => setImportOpen(false)} />
+            </DialogContent>
+          </Dialog>
+          <Dialog open={syncOpen} onOpenChange={setSyncOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline"><RefreshCw className="h-4 w-4 mr-1" /> Sync Google Sheets</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader><DialogTitle>Sync from Google Sheets</DialogTitle></DialogHeader>
+              <TeacherSyncForm academicYear={academicYear} onDone={() => setSyncOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
+        Teachers pre-loaded from Excel/Sheets are in the roster. When they sign up with their school email, they are <strong>automatically approved</strong> and linked — no manual approval needed.
+      </div>
 
       <div className="rounded-md border bg-white">
         <Table>
@@ -116,7 +154,11 @@ export function TeachersClient({ teachers, classes }: { teachers: TeacherItem[];
           </TableHeader>
           <TableBody>
             {teachers.length === 0 && (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No teachers yet.</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  No teachers have signed up yet. Import their roster above so they auto-link when they register.
+                </TableCell>
+              </TableRow>
             )}
             {teachers.map(t => (
               <TableRow key={t.id}>
@@ -128,13 +170,13 @@ export function TeachersClient({ teachers, classes }: { teachers: TeacherItem[];
                 <TableCell>{t.classes.map(c => `Year ${c.year}${c.name}`).join(", ") || <span className="text-muted-foreground text-xs">—</span>}</TableCell>
                 <TableCell className="text-xs">{t.subjects.join(", ") || "—"}</TableCell>
                 <TableCell>
-                  <Dialog open={open && editItem?.id === t.id} onOpenChange={o => { setOpen(o); if (o) setEditItem(t); }}>
+                  <Dialog open={editOpen && editItem?.id === t.id} onOpenChange={o => { setEditOpen(o); if (o) setEditItem(t); }}>
                     <DialogTrigger asChild>
                       <Button size="sm" variant="ghost"><Pencil className="h-3.5 w-3.5" /></Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader><DialogTitle>Edit {t.user.fullName}</DialogTitle></DialogHeader>
-                      {editItem && <TeacherRoleForm teacher={editItem} classes={classes} onDone={() => setOpen(false)} />}
+                      {editItem && <TeacherRoleForm teacher={editItem} classes={classes} onDone={() => setEditOpen(false)} />}
                     </DialogContent>
                   </Dialog>
                 </TableCell>

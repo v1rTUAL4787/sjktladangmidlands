@@ -334,6 +334,23 @@ model ActivityMedia {
 }
 
 // ---------------------------------------------------------------------------
+// Teacher Roster (pre-registration store, single source of truth from Sheets)
+// ---------------------------------------------------------------------------
+
+model TeacherRoster {
+  id             String      @id @default(uuid())
+  email          String      @unique
+  fullName       String
+  teacherRole    TeacherRole @default(SUBJECT_TEACHER)
+  subjects       String[]
+  assignedClassId String?
+  academicYear   String
+  sheetsRowRef   String?
+  syncedAt       DateTime    @default(now())
+  createdAt      DateTime    @default(now())
+}
+
+// ---------------------------------------------------------------------------
 // Notifications (in-portal bell fallback)
 // ---------------------------------------------------------------------------
 

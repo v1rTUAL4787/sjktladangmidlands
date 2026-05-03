@@ -2,7 +2,9 @@ import { prisma } from "@/lib/prisma/client";
 import { TeachersClient } from "@/components/admin/teachers/TeachersClient";
 
 export default async function TeachersPage() {
-  const [teachers, classes] = await Promise.all([
+  const academicYear = String(new Date().getFullYear());
+
+  const [teachers, classes, rosterCount] = await Promise.all([
     prisma.teacherProfile.findMany({
       include: {
         user: { select: { fullName: true, email: true } },
@@ -14,7 +16,8 @@ export default async function TeachersPage() {
       orderBy: [{ year: "asc" }, { name: "asc" }],
       select: { id: true, year: true, name: true },
     }),
+    prisma.teacherRoster.count(),
   ]);
 
-  return <TeachersClient teachers={teachers} classes={classes} />;
+  return <TeachersClient teachers={teachers} classes={classes} academicYear={academicYear} rosterCount={rosterCount} />;
 }
