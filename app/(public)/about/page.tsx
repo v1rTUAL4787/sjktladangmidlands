@@ -10,7 +10,7 @@ export default function AboutPage() {
         <div className="flex flex-col items-center text-center mb-10 gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="https://saoqnwdydwomigkgjciz.supabase.co/storage/v1/object/public/SJKTPublic/circle%20logo1.svg"
+            src="https://saoqnwdydwomigkgjciz.supabase.co/storage/v1/object/public/SJKTPublic/logoblue.svg"
             alt="School Badge"
             className="h-28 object-contain drop-shadow"
           />

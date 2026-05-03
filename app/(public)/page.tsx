@@ -27,7 +27,7 @@ export default async function HomePage() {
       <section className="bg-gradient-to-br from-[#1B3A6B] to-[#0f2240] text-white py-16 px-4">
         <div className="container mx-auto max-w-4xl flex flex-col md:flex-row items-center gap-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="https://saoqnwdydwomigkgjciz.supabase.co/storage/v1/object/public/SJKTPublic/circle%20logo1.svg" alt="School Badge" className="h-36 drop-shadow-lg" />
+          <img src="https://saoqnwdydwomigkgjciz.supabase.co/storage/v1/object/public/SJKTPublic/logoblue.svg" alt="School Badge" className="h-36 drop-shadow-lg" />
           <div>
             <h1 className="text-3xl md:text-4xl font-bold mb-2">{t("hero_title")}</h1>
             <p className="text-lg opacity-80 mb-2">{t("hero_subtitle")}</p>

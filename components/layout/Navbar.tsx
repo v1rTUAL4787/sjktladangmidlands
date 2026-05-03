@@ -28,7 +28,7 @@ export function Navbar({ user }: NavbarProps) {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="https://saoqnwdydwomigkgjciz.supabase.co/storage/v1/object/public/SJKTPublic/circle%20logo1.svg" alt="School Badge" className="h-10" />
+          <img src="https://saoqnwdydwomigkgjciz.supabase.co/storage/v1/object/public/SJKTPublic/logoblue.svg" alt="School Badge" className="h-10" />
           <div className="hidden sm:block">
             <p className="text-sm font-bold leading-tight">{ts("name")}</p>
             <p className="text-xs text-primary-100 opacity-80">{ts("location")}</p>
