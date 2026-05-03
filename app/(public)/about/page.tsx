@@ -1,4 +1,4 @@
-import { Mail, Phone, Fax, MapPin, School } from "lucide-react";
+import { Mail, Phone, Printer, MapPin, School } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function AboutPage() {
@@ -74,7 +74,7 @@ export default function AboutPage() {
               <a href="tel:0355103239" className="hover:underline">03-5510 3239</a>
             </div>
             <div className="flex items-center gap-3">
-              <Fax className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Printer className="h-4 w-4 text-muted-foreground shrink-0" />
               <span>03-5510 1745</span>
             </div>
             <div className="flex items-center gap-3">
