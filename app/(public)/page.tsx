@@ -27,11 +27,10 @@ export default async function HomePage() {
       <section className="bg-gradient-to-br from-primary to-primary-700 text-white py-16 px-4">
         <div className="container mx-auto max-w-4xl flex flex-col md:flex-row items-center gap-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/badge.png" alt="School Badge" width={120} height={120} className="rounded-full border-4 border-gold shadow-lg object-cover" />
+          <img src="/badge.png" alt="School Badge" className="h-32 w-32 rounded-full border-4 border-gold shadow-lg object-contain bg-white p-1" />
           <div>
             <h1 className="text-3xl md:text-4xl font-bold mb-2">{t("hero_title")}</h1>
             <p className="text-lg opacity-80 mb-2">{t("hero_subtitle")}</p>
-            <p className="text-sm opacity-60 italic">{ts("tagline")}</p>
             <div className="mt-6 flex gap-3">
               <Button asChild variant="gold" size="lg" className="font-semibold shadow">
                 <Link href="/login">Parent Login</Link>

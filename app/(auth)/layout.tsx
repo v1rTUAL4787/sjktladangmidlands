@@ -3,7 +3,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className="min-h-screen bg-[#EEF7EE] flex flex-col items-center justify-center px-4 py-12">
       <div className="mb-8 flex flex-col items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/badge.png" alt="SJKT Ladang Midlands" width={72} height={72} className="rounded-full shadow object-cover" />
+        <img src="/badge.png" alt="SJKT Ladang Midlands" className="h-20 w-20 rounded-full shadow object-contain bg-white p-1" />
         <h1 className="text-xl font-bold text-primary">SJKT Ladang Midlands</h1>
         <p className="text-sm text-muted-foreground">polylearn.my</p>
       </div>
