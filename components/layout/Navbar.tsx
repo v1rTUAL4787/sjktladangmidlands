@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { useSidebar } from "./SidebarContext";
+import { Menu } from "lucide-react";
 
 interface NavbarProps {
   user?: { email: string; fullName: string; role: string } | null;
@@ -16,6 +18,7 @@ export function Navbar({ user }: NavbarProps) {
   const ts = useTranslations("school");
   const router = useRouter();
   const supabase = createClient();
+  const { toggle } = useSidebar();
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -26,6 +29,12 @@ export function Navbar({ user }: NavbarProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-primary text-primary-foreground shadow-sm">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        <div className="flex items-center gap-3">
+          {user && (
+            <button className="md:hidden p-1.5 rounded-md hover:bg-primary-600 transition-colors" onClick={toggle} aria-label="Toggle menu">
+              <Menu className="h-5 w-5" />
+            </button>
+          )}
         <Link href="/" className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="https://saoqnwdydwomigkgjciz.supabase.co/storage/v1/object/public/SJKTPublic/logoblue.svg" alt="School Badge" className="h-10" />
@@ -34,6 +43,7 @@ export function Navbar({ user }: NavbarProps) {
             <p className="text-xs text-primary-100 opacity-80">{ts("location")}</p>
           </div>
         </Link>
+        </div>
 
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
           <Link href="/" className="opacity-80 hover:opacity-100 transition-opacity">{t("home")}</Link>

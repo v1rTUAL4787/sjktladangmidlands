@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { useSidebar } from "./SidebarContext";
 import {
-  LayoutDashboard, TrendingUp, Calendar, Image, ShieldCheck, BookOpen, Menu, X
+  LayoutDashboard, TrendingUp, Calendar, Image, ShieldCheck, BookOpen
 } from "lucide-react";
 
 interface SidebarProps {
@@ -41,17 +41,14 @@ export function Sidebar({ role }: SidebarProps) {
   const t = useTranslations("nav");
   const pathname = usePathname();
   const links = linksByRole[role];
-  const [open, setOpen] = useState(false);
+  const { open, close } = useSidebar();
 
   const navLinks = (
     <nav className="flex flex-col gap-1 px-3 pt-4">
       {links.map(({ href, icon: Icon, key }) => {
         const active = href === "/dashboard" ? pathname === href : pathname.startsWith(href);
         return (
-          <Link
-            key={href}
-            href={href}
-            onClick={() => setOpen(false)}
+          <Link key={href} href={href} onClick={close}
             className={cn(
               "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
               active ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary"
@@ -67,29 +64,14 @@ export function Sidebar({ role }: SidebarProps) {
 
   return (
     <>
-      {/* Hamburger button — mobile only */}
-      <button
-        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-primary text-primary-foreground shadow-md"
-        onClick={() => setOpen(o => !o)}
-        aria-label="Toggle menu"
-      >
-        {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </button>
-
       {/* Mobile overlay */}
-      {open && (
-        <div
-          className="md:hidden fixed inset-0 z-40 bg-black/50"
-          onClick={() => setOpen(false)}
-        />
-      )}
+      {open && <div className="md:hidden fixed inset-0 z-40 bg-black/50" onClick={close} />}
 
       {/* Mobile drawer */}
       <aside className={cn(
-        "md:hidden fixed top-0 left-0 z-40 h-full w-56 bg-white border-r shadow-xl transition-transform duration-200",
+        "md:hidden fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] w-56 bg-white border-r shadow-xl transition-transform duration-200",
         open ? "translate-x-0" : "-translate-x-full"
       )}>
-        <div className="h-16" /> {/* spacer for navbar */}
         {navLinks}
       </aside>
 

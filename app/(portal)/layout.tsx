@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { SidebarProvider } from "@/components/layout/SidebarContext";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -29,12 +30,14 @@ export default async function PortalLayout({ children }: { children: React.React
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar user={dbUser} />
-      <div className="flex flex-1">
-        <Sidebar role={dbUser.role as "ADMIN" | "TEACHER" | "PARENT"} />
-        <main className="flex-1 p-6 bg-surface">{children}</main>
+    <SidebarProvider>
+      <div className="min-h-screen flex flex-col">
+        <Navbar user={dbUser} />
+        <div className="flex flex-1">
+          <Sidebar role={dbUser.role as "ADMIN" | "TEACHER" | "PARENT"} />
+          <main className="flex-1 p-6 bg-surface">{children}</main>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }
