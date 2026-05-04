@@ -52,21 +52,22 @@ export function AdminSidebar() {
 
   return (
     <>
-      {/* Mobile overlay */}
-      {open && <div className="md:hidden fixed inset-0 z-40 bg-black/50" onClick={close} />}
+      {/* Overlay */}
+      {open && <div className="fixed inset-0 z-40 bg-black/50" onClick={close} />}
 
-      {/* Mobile drawer */}
+      {/* Sidebar drawer — shown when open on all screen sizes */}
       <aside className={cn(
-        "md:hidden fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] w-56 bg-white border-r shadow-xl transition-transform duration-200",
+        "fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] w-56 bg-white border-r shadow-xl transition-transform duration-200",
         open ? "translate-x-0" : "-translate-x-full"
       )}>
         {navContent}
       </aside>
 
-      {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col w-56 min-h-screen border-r bg-white shrink-0">
-        {navContent}
-      </aside>
+      {/* Spacer to push content right when sidebar is open on desktop */}
+      <div className={cn(
+        "hidden md:block shrink-0 transition-all duration-200",
+        open ? "w-56" : "w-0"
+      )} />
     </>
   );
 }

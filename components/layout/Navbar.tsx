@@ -31,7 +31,7 @@ export function Navbar({ user }: NavbarProps) {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-3">
           {user && (
-            <button className="md:hidden p-1.5 rounded-md hover:bg-primary-600 transition-colors" onClick={toggle} aria-label="Toggle menu">
+            <button className="p-1.5 rounded-md hover:bg-primary-600 transition-colors" onClick={toggle} aria-label="Toggle menu">
               <Menu className="h-5 w-5" />
             </button>
           )}
