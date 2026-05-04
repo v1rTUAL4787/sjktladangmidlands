@@ -5,7 +5,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="https://saoqnwdydwomigkgjciz.supabase.co/storage/v1/object/public/SJKTPublic/logoblue.svg" alt="SJKT Ladang Midlands" className="h-20" />
         <h1 className="text-xl font-bold text-primary">SJKT Ladang Midlands</h1>
-        <p className="text-sm text-muted-foreground">polylearn.my</p>
+        <p className="text-sm text-muted-foreground">Yath AI Labs</p>
       </div>
       <div className="w-full max-w-md">{children}</div>
     </div>
