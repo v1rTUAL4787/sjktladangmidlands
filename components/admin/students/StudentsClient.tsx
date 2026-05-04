@@ -30,20 +30,48 @@ function StudentForm({ classes, existing, onDone }: {
   const [dob, setDob] = useState(existing?.dateOfBirth ? existing.dateOfBirth.slice(0, 10) : "");
   const [gender, setGender] = useState(existing?.gender ?? "none");
   const [classId, setClassId] = useState(existing?.class ? classes.find(c => c.year === existing.class.year && c.name === existing.class.name)?.id ?? "none" : "none");
+
+  const [parentName, setParentName] = useState("");
+  const [parentEmail, setParentEmail] = useState("");
+  const [parentWhatsapp, setParentWhatsapp] = useState("");
+  const [parentRelation, setParentRelation] = useState("Mother");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!existing && !icNumber) { setError("IC Number is required"); return; }
-    setLoading(true); setError("");
+    if (parentEmail && !parentName) { setError("Parent name is required when email is provided"); return; }
+    setLoading(true); setError(""); setSuccess("");
+
     const url = existing ? `/api/admin/students/${existing.id}` : "/api/admin/students";
     const method = existing ? "PUT" : "POST";
     const body: Record<string, unknown> = { fullName, dateOfBirth: dob || null, gender: gender === "none" ? null : gender, classId };
-    if (!existing) body.icNumber = icNumber;
+    if (!existing) {
+      body.icNumber = icNumber;
+      if (parentEmail) {
+        body.parent = { name: parentName, email: parentEmail, whatsapp: parentWhatsapp, relation: parentRelation };
+      }
+    }
+
     const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (res.ok) { router.refresh(); onDone(); }
-    else { const d = await res.json(); setError(d.error ?? "Error"); }
+    const data = await res.json();
+    if (res.ok) {
+      router.refresh();
+      if (data.parentInviteSent) {
+        setSuccess(`Student added. Invite email sent to ${parentEmail}.`);
+        setTimeout(() => onDone(), 2000);
+      } else if (data.parentLinked) {
+        setSuccess("Student added and linked to existing parent account.");
+        setTimeout(() => onDone(), 2000);
+      } else {
+        onDone();
+      }
+    } else {
+      setError(data.error ?? "Error");
+    }
     setLoading(false);
   }
 
@@ -85,7 +113,44 @@ function StudentForm({ classes, existing, onDone }: {
           </SelectContent>
         </Select>
       </div>
+
+      {!existing && (
+        <>
+          <div className="border-t pt-4">
+            <p className="text-sm font-semibold text-primary mb-3">Parent / Guardian Details</p>
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label>Parent Name</Label>
+                  <Input value={parentName} onChange={e => setParentName(e.target.value)} placeholder="Full name" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label>Relation</Label>
+                  <Select value={parentRelation} onValueChange={setParentRelation}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Mother">Mother</SelectItem>
+                      <SelectItem value="Father">Father</SelectItem>
+                      <SelectItem value="Guardian">Guardian</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Email <span className="text-muted-foreground text-xs">(used for login — invite will be sent)</span></Label>
+                <Input type="email" value={parentEmail} onChange={e => setParentEmail(e.target.value)} placeholder="parent@example.com" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>WhatsApp Number <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                <Input value={parentWhatsapp} onChange={e => setParentWhatsapp(e.target.value)} placeholder="+601X-XXXXXXX" />
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       {error && <p className="text-sm text-red-500">{error}</p>}
+      {success && <p className="text-sm text-green-600">{success}</p>}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onDone}>Cancel</Button>
         <Button type="submit" disabled={loading}>{loading ? "Saving..." : existing ? "Update" : "Add Student"}</Button>
@@ -172,7 +237,7 @@ export function StudentsClient({ students, classes }: { students: StudentItem[];
           </Dialog>
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild><Button onClick={() => setEditItem(null)}><Plus className="h-4 w-4 mr-1" /> Add Student</Button></DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader><DialogTitle>{editItem ? "Edit Student" : "Add Student"}</DialogTitle></DialogHeader>
               <StudentForm classes={classes} existing={editItem ?? undefined} onDone={() => setAddOpen(false)} />
             </DialogContent>
