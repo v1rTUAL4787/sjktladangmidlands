@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma/client";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { randomUUID } from "crypto";
 
 export interface ParentInput {
   name: string;
@@ -9,13 +9,13 @@ export interface ParentInput {
 }
 
 /**
- * For each ParentInput: if email already exists in DB, link them.
- * Otherwise invite via Supabase admin, create User + ParentProfile, link.
- * Returns number of new Supabase invites sent.
+ * For each ParentInput: if email already exists in DB link them.
+ * Otherwise create a Prisma User with a placeholder supabaseId so the
+ * parent can sign in with Google later — the auth callback will stamp
+ * in their real Supabase ID at first login.
  */
 export async function linkParentsToStudent(studentId: string, parents: ParentInput[]): Promise<number> {
-  let invitesSent = 0;
-  const supabaseAdmin = createAdminClient();
+  let created = 0;
 
   for (const p of parents) {
     if (!p.email || !p.name) continue;
@@ -34,15 +34,10 @@ export async function linkParentsToStudent(studentId: string, parents: ParentInp
       continue;
     }
 
-    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(p.email, {
-      data: { fullName: p.name, role: "PARENT" },
-    });
-    if (error || !data?.user) continue;
-
     await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
-          supabaseId: data.user.id,
+          supabaseId: `pre:${randomUUID()}`,
           email: p.email,
           fullName: p.name,
           role: "PARENT",
@@ -62,8 +57,8 @@ export async function linkParentsToStudent(studentId: string, parents: ParentInp
       });
     });
 
-    invitesSent++;
+    created++;
   }
 
-  return invitesSent;
+  return created;
 }

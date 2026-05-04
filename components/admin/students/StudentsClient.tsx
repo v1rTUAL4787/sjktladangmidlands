@@ -114,7 +114,7 @@ function ParentSection({
           </div>
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">Email <span className="text-muted-foreground">(invite will be sent)</span></Label>
+          <Label className="text-xs">Email <span className="text-muted-foreground">(parent uses this to sign in with Google)</span></Label>
           <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="parent@example.com" className="h-8 text-sm" />
         </div>
         <div className="flex flex-col gap-1">
@@ -184,9 +184,9 @@ function StudentForm({ classes, existing, onDone }: {
 
     if (res.ok) {
       router.refresh();
-      const inviteCount = data.invitesSent ?? 0;
-      if (inviteCount > 0) {
-        setSuccess(`Saved. Invite email${inviteCount > 1 ? "s" : ""} sent to ${inviteCount} parent${inviteCount > 1 ? "s" : ""}.`);
+      const createdCount = data.invitesSent ?? 0;
+      if (createdCount > 0) {
+        setSuccess(`Saved. ${createdCount} parent account${createdCount > 1 ? "s" : ""} created. They can now sign in with Google.`);
         setTimeout(() => onDone(), 2000);
       } else {
         onDone();
@@ -291,7 +291,7 @@ function BulkImportForm({ classes, onDone }: { classes: ClassItem[]; onDone: () 
       <Input type="file" accept=".xlsx,.xls" onChange={e => setFile(e.target.files?.[0] ?? null)} />
       {result && (
         <div className="rounded-md bg-muted p-3 text-sm">
-          <p className="font-medium">✓ {result.imported} imported, {result.skipped} skipped{result.invitesSent ? `, ${result.invitesSent} parent invite${result.invitesSent > 1 ? "s" : ""} sent` : ""}</p>
+          <p className="font-medium">✓ {result.imported} imported, {result.skipped} skipped{result.invitesSent ? `, ${result.invitesSent} parent account${result.invitesSent > 1 ? "s" : ""} created` : ""}</p>
           {result.errors.slice(0, 5).map((err, i) => <p key={i} className="text-red-500 text-xs mt-1">{err}</p>)}
         </div>
       )}

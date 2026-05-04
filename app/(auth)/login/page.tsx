@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
@@ -13,11 +13,20 @@ import { Chrome } from "lucide-react";
 export default function LoginPage() {
   const t = useTranslations("auth");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const urlError = searchParams.get("error");
+  const errorMessage =
+    urlError === "not_registered"
+      ? "This Google account is not registered. Please contact the school admin."
+      : urlError === "auth_failed"
+      ? "Sign-in failed. Please try again."
+      : "";
 
   async function handleGoogleLogin() {
     await supabase.auth.signInWithOAuth({
@@ -47,6 +56,12 @@ export default function LoginPage() {
         <CardDescription>{t("login_subtitle")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
+        {errorMessage && (
+          <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            {errorMessage}
+          </div>
+        )}
+
         <Button variant="outline" onClick={handleGoogleLogin} className="w-full gap-2">
           <Chrome className="h-4 w-4" />
           {t("google_signin")}
@@ -75,10 +90,6 @@ export default function LoginPage() {
             {loading ? "Signing in..." : t("signin_button")}
           </Button>
         </form>
-
-        <div className="text-center text-sm text-muted-foreground">
-          <Link href="/register" className="text-accent hover:underline">{t("register_link")}</Link>
-        </div>
       </CardContent>
     </Card>
   );
