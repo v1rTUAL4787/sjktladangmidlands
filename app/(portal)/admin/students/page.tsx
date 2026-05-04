@@ -6,7 +6,16 @@ export default async function StudentsPage() {
     prisma.student.findMany({
       include: {
         class: { select: { year: true, name: true } },
-        parents: { include: { parent: { include: { user: { select: { fullName: true } } } } } },
+        parents: {
+          include: {
+            parent: {
+              select: {
+                id: true,
+                user: { select: { fullName: true, email: true, phone: true } },
+              },
+            },
+          },
+        },
       },
       orderBy: [{ class: { year: "asc" } }, { fullName: "asc" }],
     }),

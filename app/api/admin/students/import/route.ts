@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma/client";
 import { requireAdmin } from "@/lib/admin/auth";
 import { hashIC, encryptIC } from "@/lib/crypto";
+import { linkParentsToStudent, ParentInput } from "@/lib/admin/students";
 import * as XLSX from "xlsx";
 
 export async function POST(req: Request) {
@@ -19,6 +20,7 @@ export async function POST(req: Request) {
 
   let imported = 0;
   let skipped = 0;
+  let invitesSent = 0;
   const errors: string[] = [];
 
   for (const row of rows) {
@@ -30,7 +32,11 @@ export async function POST(req: Request) {
       const rawDob = row["dateOfBirth"] ?? row["Date of Birth"];
       const enrolledYear = parseInt(String(row["enrolledYear"] ?? row["Enrolled Year"] ?? new Date().getFullYear()));
 
-      if (!fullName || !icNumber || !classId) { errors.push(`Skipped row: missing fullName/icNumber/classId`); skipped++; continue; }
+      if (!fullName || !icNumber || !classId) {
+        errors.push(`Skipped row: missing fullName/icNumber/classId`);
+        skipped++;
+        continue;
+      }
 
       const hash = hashIC(icNumber);
       let dob: Date | null = null;
@@ -39,7 +45,7 @@ export async function POST(req: Request) {
         else dob = new Date(String(rawDob));
       }
 
-      await prisma.student.upsert({
+      const student = await prisma.student.upsert({
         where: { icNumberHash: hash },
         update: { fullName, dateOfBirth: dob, gender: (gender === "MALE" || gender === "FEMALE") ? gender as "MALE" | "FEMALE" : null, classId },
         create: {
@@ -52,12 +58,29 @@ export async function POST(req: Request) {
           enrolledYear: isNaN(enrolledYear) ? new Date().getFullYear() : enrolledYear,
         },
       });
+
+      // Collect parent columns: parentName, parentEmail, parentRelation, parentWhatsapp
+      // and parentName2, parentEmail2, ... for multiple parents
+      const parents: ParentInput[] = [];
+      for (let n = 1; n <= 5; n++) {
+        const suffix = n === 1 ? "" : String(n);
+        const pName = String(row[`parentName${suffix}`] ?? row[`Parent Name${suffix === "" ? "" : " " + suffix}`] ?? "").trim();
+        const pEmail = String(row[`parentEmail${suffix}`] ?? row[`Parent Email${suffix === "" ? "" : " " + suffix}`] ?? "").trim();
+        const pRelation = String(row[`parentRelation${suffix}`] ?? row[`Parent Relation${suffix === "" ? "" : " " + suffix}`] ?? "Parent").trim();
+        const pWhatsapp = String(row[`parentWhatsapp${suffix}`] ?? row[`Parent WhatsApp${suffix === "" ? "" : " " + suffix}`] ?? "").trim();
+        if (pName && pEmail) parents.push({ name: pName, email: pEmail, relation: pRelation, whatsapp: pWhatsapp || undefined });
+      }
+
+      if (parents.length > 0) {
+        invitesSent += await linkParentsToStudent(student.id, parents);
+      }
+
       imported++;
     } catch (e) {
-      errors.push(`Error on row: ${JSON.stringify(row)} — ${(e as Error).message}`);
+      errors.push(`Error on row: ${String(row["fullName"] ?? row["Full Name"] ?? "?")} — ${(e as Error).message}`);
       skipped++;
     }
   }
 
-  return NextResponse.json({ imported, skipped, errors });
+  return NextResponse.json({ imported, skipped, invitesSent, errors });
 }

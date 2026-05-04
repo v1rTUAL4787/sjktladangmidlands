@@ -9,14 +9,124 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Upload } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, X } from "lucide-react";
 import { format } from "date-fns";
 
 interface ClassItem { id: string; year: number; name: string }
+interface LinkedParent {
+  parentId: string;
+  relation: string;
+  parent: { id: string; user: { fullName: string; email: string; phone: string | null } };
+}
 interface StudentItem {
   id: string; fullName: string; gender: string | null; dateOfBirth: string | null; enrolledYear: number;
   class: { year: number; name: string };
-  parents: { parent: { user: { fullName: string } } }[];
+  parents: LinkedParent[];
+}
+
+interface ParentInput { name: string; email: string; whatsapp: string; relation: string }
+
+function ParentSection({
+  existing,
+  linkedParents,
+  onRemoveParent,
+  newParents,
+  onAddParent,
+  onRemoveNew,
+}: {
+  existing: boolean;
+  linkedParents: LinkedParent[];
+  onRemoveParent: (parentId: string) => void;
+  newParents: ParentInput[];
+  onAddParent: (p: ParentInput) => void;
+  onRemoveNew: (index: number) => void;
+}) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [relation, setRelation] = useState("Mother");
+
+  function addParent() {
+    if (!name || !email) return;
+    onAddParent({ name, email, whatsapp, relation });
+    setName(""); setEmail(""); setWhatsapp(""); setRelation("Mother");
+  }
+
+  return (
+    <div className="border-t pt-4 flex flex-col gap-3">
+      <p className="text-sm font-semibold text-primary">Parent / Guardian Details</p>
+
+      {existing && linkedParents.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs text-muted-foreground font-medium">Linked parents</p>
+          {linkedParents.map(lp => (
+            <div key={lp.parent.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <div>
+                <span className="font-medium">{lp.parent.user.fullName}</span>
+                <span className="text-muted-foreground ml-2">({lp.relation})</span>
+                <div className="text-xs text-muted-foreground">{lp.parent.user.email}</div>
+              </div>
+              <Button type="button" size="sm" variant="ghost" className="text-red-500 hover:text-red-600 h-7 w-7 p-0"
+                onClick={() => onRemoveParent(lp.parent.id)}>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {newParents.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs text-muted-foreground font-medium">To be added</p>
+          {newParents.map((p, i) => (
+            <div key={i} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm bg-green-50">
+              <div>
+                <span className="font-medium">{p.name}</span>
+                <span className="text-muted-foreground ml-2">({p.relation})</span>
+                <div className="text-xs text-muted-foreground">{p.email}</div>
+              </div>
+              <Button type="button" size="sm" variant="ghost" className="text-red-500 hover:text-red-600 h-7 w-7 p-0"
+                onClick={() => onRemoveNew(i)}>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="rounded-md border p-3 flex flex-col gap-3 bg-muted/30">
+        <p className="text-xs text-muted-foreground font-medium">Add a parent</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">Name</Label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder="Full name" className="h-8 text-sm" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs">Relation</Label>
+            <Select value={relation} onValueChange={setRelation}>
+              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Mother">Mother</SelectItem>
+                <SelectItem value="Father">Father</SelectItem>
+                <SelectItem value="Guardian">Guardian</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">Email <span className="text-muted-foreground">(invite will be sent)</span></Label>
+          <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="parent@example.com" className="h-8 text-sm" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">WhatsApp <span className="text-muted-foreground">(optional)</span></Label>
+          <Input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="+601X-XXXXXXX" className="h-8 text-sm" />
+        </div>
+        <Button type="button" size="sm" variant="outline" onClick={addParent} disabled={!name || !email}>
+          <Plus className="h-3.5 w-3.5 mr-1" /> Add Parent
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 function StudentForm({ classes, existing, onDone }: {
@@ -29,42 +139,54 @@ function StudentForm({ classes, existing, onDone }: {
   const [icNumber, setIcNumber] = useState("");
   const [dob, setDob] = useState(existing?.dateOfBirth ? existing.dateOfBirth.slice(0, 10) : "");
   const [gender, setGender] = useState(existing?.gender ?? "none");
-  const [classId, setClassId] = useState(existing?.class ? classes.find(c => c.year === existing.class.year && c.name === existing.class.name)?.id ?? "none" : "none");
+  const [classId, setClassId] = useState(
+    existing?.class ? classes.find(c => c.year === existing.class.year && c.name === existing.class.name)?.id ?? "none" : "none"
+  );
 
-  const [parentName, setParentName] = useState("");
-  const [parentEmail, setParentEmail] = useState("");
-  const [parentWhatsapp, setParentWhatsapp] = useState("");
-  const [parentRelation, setParentRelation] = useState("Mother");
+  const [linkedParents, setLinkedParents] = useState<LinkedParent[]>(existing?.parents ?? []);
+  const [removedParentIds, setRemovedParentIds] = useState<string[]>([]);
+  const [newParents, setNewParents] = useState<ParentInput[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  function handleRemoveLinked(parentId: string) {
+    setLinkedParents(prev => prev.filter(lp => lp.parent.id !== parentId));
+    setRemovedParentIds(prev => [...prev, parentId]);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!existing && !icNumber) { setError("IC Number is required"); return; }
-    if (parentEmail && !parentName) { setError("Parent name is required when email is provided"); return; }
     setLoading(true); setError(""); setSuccess("");
 
     const url = existing ? `/api/admin/students/${existing.id}` : "/api/admin/students";
     const method = existing ? "PUT" : "POST";
-    const body: Record<string, unknown> = { fullName, dateOfBirth: dob || null, gender: gender === "none" ? null : gender, classId };
+
+    const body: Record<string, unknown> = {
+      fullName,
+      dateOfBirth: dob || null,
+      gender: gender === "none" ? null : gender,
+      classId,
+    };
+
     if (!existing) {
       body.icNumber = icNumber;
-      if (parentEmail) {
-        body.parent = { name: parentName, email: parentEmail, whatsapp: parentWhatsapp, relation: parentRelation };
-      }
+      if (newParents.length > 0) body.parents = newParents;
+    } else {
+      body.removeParentIds = removedParentIds;
+      if (newParents.length > 0) body.parents = newParents;
     }
 
     const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const data = await res.json();
+
     if (res.ok) {
       router.refresh();
-      if (data.parentInviteSent) {
-        setSuccess(`Student added. Invite email sent to ${parentEmail}.`);
-        setTimeout(() => onDone(), 2000);
-      } else if (data.parentLinked) {
-        setSuccess("Student added and linked to existing parent account.");
+      const inviteCount = data.invitesSent ?? 0;
+      if (inviteCount > 0) {
+        setSuccess(`Saved. Invite email${inviteCount > 1 ? "s" : ""} sent to ${inviteCount} parent${inviteCount > 1 ? "s" : ""}.`);
         setTimeout(() => onDone(), 2000);
       } else {
         onDone();
@@ -114,40 +236,14 @@ function StudentForm({ classes, existing, onDone }: {
         </Select>
       </div>
 
-      {!existing && (
-        <>
-          <div className="border-t pt-4">
-            <p className="text-sm font-semibold text-primary mb-3">Parent / Guardian Details</p>
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <Label>Parent Name</Label>
-                  <Input value={parentName} onChange={e => setParentName(e.target.value)} placeholder="Full name" />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label>Relation</Label>
-                  <Select value={parentRelation} onValueChange={setParentRelation}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Mother">Mother</SelectItem>
-                      <SelectItem value="Father">Father</SelectItem>
-                      <SelectItem value="Guardian">Guardian</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Email <span className="text-muted-foreground text-xs">(used for login — invite will be sent)</span></Label>
-                <Input type="email" value={parentEmail} onChange={e => setParentEmail(e.target.value)} placeholder="parent@example.com" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>WhatsApp Number <span className="text-muted-foreground text-xs">(optional)</span></Label>
-                <Input value={parentWhatsapp} onChange={e => setParentWhatsapp(e.target.value)} placeholder="+601X-XXXXXXX" />
-              </div>
-            </div>
-          </div>
-        </>
-      )}
+      <ParentSection
+        existing={!!existing}
+        linkedParents={linkedParents}
+        onRemoveParent={handleRemoveLinked}
+        newParents={newParents}
+        onAddParent={p => setNewParents(prev => [...prev, p])}
+        onRemoveNew={i => setNewParents(prev => prev.filter((_, idx) => idx !== i))}
+      />
 
       {error && <p className="text-sm text-red-500">{error}</p>}
       {success && <p className="text-sm text-green-600">{success}</p>}
@@ -163,7 +259,7 @@ function BulkImportForm({ classes, onDone }: { classes: ClassItem[]; onDone: () 
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ imported: number; skipped: number; errors: string[] } | null>(null);
+  const [result, setResult] = useState<{ imported: number; skipped: number; errors: string[]; invitesSent?: number } | null>(null);
 
   async function handleImport() {
     if (!file) return;
@@ -180,8 +276,14 @@ function BulkImportForm({ classes, onDone }: { classes: ClassItem[]; onDone: () 
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
-        Upload an Excel file with columns: <code className="bg-muted px-1 rounded text-xs">fullName, icNumber, dateOfBirth, gender (MALE/FEMALE), classId, enrolledYear</code>
+        Upload an Excel file with columns:
       </p>
+      <div className="text-xs bg-muted rounded p-2 space-y-1">
+        <p className="font-medium">Required: <code>fullName, icNumber, classId</code></p>
+        <p className="text-muted-foreground">Optional student: <code>dateOfBirth, gender (MALE/FEMALE), enrolledYear</code></p>
+        <p className="text-muted-foreground">Optional parent: <code>parentName, parentEmail, parentRelation, parentWhatsapp</code></p>
+        <p className="text-muted-foreground italic">Multiple parents: add columns parentName2, parentEmail2, parentRelation2, parentWhatsapp2 etc.</p>
+      </div>
       <p className="text-xs text-muted-foreground">Class IDs:</p>
       <div className="text-xs bg-muted rounded p-2 max-h-24 overflow-y-auto">
         {classes.map(c => <div key={c.id}>{c.id} → Year {c.year}{c.name}</div>)}
@@ -189,8 +291,8 @@ function BulkImportForm({ classes, onDone }: { classes: ClassItem[]; onDone: () 
       <Input type="file" accept=".xlsx,.xls" onChange={e => setFile(e.target.files?.[0] ?? null)} />
       {result && (
         <div className="rounded-md bg-muted p-3 text-sm">
-          <p className="font-medium">✓ {result.imported} imported, {result.skipped} skipped</p>
-          {result.errors.slice(0, 3).map((err, i) => <p key={i} className="text-red-500 text-xs mt-1">{err}</p>)}
+          <p className="font-medium">✓ {result.imported} imported, {result.skipped} skipped{result.invitesSent ? `, ${result.invitesSent} parent invite${result.invitesSent > 1 ? "s" : ""} sent` : ""}</p>
+          {result.errors.slice(0, 5).map((err, i) => <p key={i} className="text-red-500 text-xs mt-1">{err}</p>)}
         </div>
       )}
       <div className="flex justify-end gap-2">
@@ -269,7 +371,11 @@ export function StudentsClient({ students, classes }: { students: StudentItem[];
                 <TableCell>Year {s.class.year}{s.class.name}</TableCell>
                 <TableCell>{s.gender ? <Badge variant="secondary">{s.gender}</Badge> : "—"}</TableCell>
                 <TableCell>{s.dateOfBirth ? format(new Date(s.dateOfBirth), "dd MMM yyyy") : "—"}</TableCell>
-                <TableCell className="text-xs">{s.parents.map(p => p.parent.user.fullName).join(", ") || <span className="text-muted-foreground">None</span>}</TableCell>
+                <TableCell className="text-xs">
+                  {s.parents.length > 0
+                    ? s.parents.map(p => p.parent.user.fullName).join(", ")
+                    : <span className="text-muted-foreground">None</span>}
+                </TableCell>
                 <TableCell>
                   <div className="flex gap-1">
                     <Button size="sm" variant="ghost" onClick={() => { setEditItem(s); setAddOpen(true); }}><Pencil className="h-3.5 w-3.5" /></Button>
