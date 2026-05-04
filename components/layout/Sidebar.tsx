@@ -43,6 +43,9 @@ export function Sidebar({ role }: SidebarProps) {
   const links = linksByRole[role];
   const { open, close } = useSidebar();
 
+  // Admin pages have their own sidebar — don't render this one
+  if (pathname.startsWith("/admin")) return null;
+
   const navLinks = (
     <nav className="flex flex-col gap-1 px-3 pt-4">
       {links.map(({ href, icon: Icon, key }) => {
