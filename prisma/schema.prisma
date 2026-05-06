@@ -365,3 +365,75 @@ model Notification {
 
   @@index([userId, read])
 }
+
+// ---------------------------------------------------------------------------
+// Superapp public submissions
+// ---------------------------------------------------------------------------
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  date        DateTime
+  endDate     DateTime?
+  location    String?
+  createdAt   DateTime @default(now())
+}
+
+model AppointmentRequest {
+  id            String   @id @default(uuid())
+  name          String
+  email         String
+  phone         String
+  teacherName   String
+  preferredDate String
+  preferredTime String
+  message       String?
+  status        String   @default("PENDING")
+  createdAt     DateTime @default(now())
+}
+
+model VisitorRegistration {
+  id           String    @id @default(uuid())
+  parentName   String
+  studentName  String
+  carPlate     String
+  visitDate    DateTime
+  visitTime    String
+  reason       String
+  teacherName  String
+  qrCode       String    @unique
+  checkedInAt  DateTime?
+  checkedOutAt DateTime?
+  createdAt    DateTime  @default(now())
+}
+
+model Donation {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  amount    Float
+  purpose   String
+  message   String?
+  createdAt DateTime @default(now())
+}
+
+model VolunteerSignup {
+  id           String   @id @default(uuid())
+  name         String
+  email        String
+  phone        String
+  skills       String
+  availability String
+  message      String?
+  createdAt    DateTime @default(now())
+}
+
+model IdeaSubmission {
+  id        String   @id @default(uuid())
+  name      String?
+  email     String?
+  title     String
+  idea      String
+  createdAt DateTime @default(now())
+}
