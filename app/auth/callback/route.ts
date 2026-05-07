@@ -18,10 +18,15 @@ export async function GET(request: Request) {
   const next = searchParams.get("next") ?? null;
 
   // Already registered — just redirect
-  const existing = await prisma.user.findUnique({ where: { supabaseId } });
+  const existing = await prisma.user.findUnique({ where: { supabaseId }, include: { parentProfile: true } });
   if (existing) {
-    const dest = next ?? (existing.role === "PARENT" ? "/parent" : "/admin");
-    return NextResponse.redirect(`${origin}${dest}`);
+    // Orphaned PARENT row (no profile) — delete so whitelist re-registers cleanly
+    if (existing.role === "PARENT" && !existing.parentProfile) {
+      await prisma.user.delete({ where: { supabaseId } });
+    } else {
+      const dest = next ?? (existing.role === "PARENT" ? "/parent" : "/admin");
+      return NextResponse.redirect(`${origin}${dest}`);
+    }
   }
 
   // Pre-registered by admin via student form (supabaseId starts with "pre:")
@@ -36,12 +41,17 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}${dest}`);
   }
 
-  // Parent whitelist check — email in ParentWhitelist = auto-register as PARENT
-  const whitelisted = await (prisma as any).parentWhitelist.findUnique({
-    where: { email },
-    include: { children: true },
-  });
+  // Parent whitelist check — use raw SQL to bypass generated client type issues
+  const whitelistRows = await prisma.$queryRaw<Array<{
+    id: string; parentName: string; email: string; phone: string | null; relation: string;
+  }>>`SELECT id, "parentName", email, phone, relation FROM "ParentWhitelist" WHERE email = ${email} LIMIT 1`;
+  const whitelisted = whitelistRows[0] ?? null;
+
   if (whitelisted) {
+    const childRows = await prisma.$queryRaw<Array<{
+      id: string; childName: string; classYear: number; className: string; studentId: string | null;
+    }>>`SELECT id, "childName", "classYear", "className", "studentId" FROM "ParentWhitelistChild" WHERE "whitelistId" = ${whitelisted.id}`;
+
     const user = await prisma.user.create({
       data: {
         supabaseId,
@@ -61,7 +71,7 @@ export async function GET(request: Request) {
     });
 
     // Link whitelisted children by matching class if student exists
-    for (const child of whitelisted.children) {
+    for (const child of childRows) {
       const student = await prisma.student.findFirst({
         where: {
           fullName: { contains: child.childName, mode: "insensitive" },
@@ -74,10 +84,7 @@ export async function GET(request: Request) {
           update: {},
           create: { parentId: user.parentProfile.id, studentId: student.id, relation: whitelisted.relation },
         });
-        await (prisma as any).parentWhitelistChild.update({
-          where: { id: child.id },
-          data: { studentId: student.id },
-        });
+        await prisma.$executeRaw`UPDATE "ParentWhitelistChild" SET "studentId" = ${student.id} WHERE id = ${child.id}`;
       }
     }
 
