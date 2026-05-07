@@ -97,6 +97,7 @@ model Class {
   classTeacherId String?
   students       Student[]
   activities     Activity[]
+  timetable      TimetableSlot[]
 
   @@unique([year, name, academicYear])
 }
@@ -436,4 +437,23 @@ model IdeaSubmission {
   title     String
   idea      String
   createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Timetable
+// ---------------------------------------------------------------------------
+
+model TimetableSlot {
+  id          String @id @default(uuid())
+  classId     String
+  day         String  // Monday, Tuesday, etc.
+  period      Int     // 1-8
+  startTime   String
+  endTime     String
+  subject     String
+  teacherName String
+
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, day, period])
 }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { formatDistanceToNow, format } from "date-fns";
 import {
   Megaphone, CalendarDays, Phone, CalendarCheck,
-  QrCode, Heart, Users, Lightbulb, MessageSquare, ChevronRight, Pin
+  QrCode, Heart, Users, Lightbulb, MessageSquare, ChevronRight, Pin, GraduationCap
 } from "lucide-react";
 
 interface Announcement {
@@ -26,7 +26,8 @@ const tiles = [
   { href: "/donate",        icon: Heart,         label: "Donate",         color: "bg-rose-500" },
   { href: "/volunteer",     icon: Users,         label: "Volunteer",      color: "bg-emerald-600" },
   { href: "/ideas",         icon: Lightbulb,     label: "Share Idea",     color: "bg-amber-500" },
-  { href: "/feedback",      icon: MessageSquare, label: "Feedback",       color: "bg-[#00A0C0]" },
+  { href: "/feedback",      icon: MessageSquare,  label: "Feedback",       color: "bg-[#00A0C0]" },
+  { href: "/parent",        icon: GraduationCap,  label: "Parents",        color: "bg-[#1B3A6B]" },
 ];
 
 export function SuperAppHome({ announcements, events }: { announcements: Announcement[]; events: Event[] }) {

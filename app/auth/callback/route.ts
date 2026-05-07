@@ -15,10 +15,14 @@ export async function GET(request: Request) {
 
   const supabaseId = data.user.id;
   const email = data.user.email!.toLowerCase();
+  const next = searchParams.get("next") ?? null;
 
   // Check if already fully registered
   const existing = await prisma.user.findUnique({ where: { supabaseId } });
-  if (existing) return NextResponse.redirect(`${origin}/dashboard`);
+  if (existing) {
+    const dest = next ?? (existing.role === "PARENT" ? "/parent" : "/admin");
+    return NextResponse.redirect(`${origin}${dest}`);
+  }
 
   // Pre-registered by admin (supabaseId starts with "pre:")
   const preRegistered = await prisma.user.findUnique({ where: { email } });
@@ -30,7 +34,8 @@ export async function GET(request: Request) {
     await admin.auth.admin.updateUserById(supabaseId, {
       user_metadata: { role: preRegistered.role, fullName: preRegistered.fullName },
     });
-    return NextResponse.redirect(`${origin}/dashboard`);
+    const dest = next ?? (preRegistered.role === "PARENT" ? "/parent" : "/admin");
+    return NextResponse.redirect(`${origin}${dest}`);
   }
 
   // Teacher roster check — auto-register if email is on the roster
@@ -58,7 +63,7 @@ export async function GET(request: Request) {
     await admin.auth.admin.updateUserById(supabaseId, {
       user_metadata: { role: "TEACHER", fullName: roster.fullName },
     });
-    return NextResponse.redirect(`${origin}/dashboard`);
+    return NextResponse.redirect(`${origin}/admin`);
   }
 
   // Not pre-registered and not on roster — sign them out and reject
