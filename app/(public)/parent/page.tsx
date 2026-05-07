@@ -3,11 +3,11 @@ import { prisma } from "@/lib/prisma/client";
 import { ParentLoginGate } from "@/components/superapp/ParentLoginGate";
 import { ParentDashboard } from "@/components/superapp/ParentDashboard";
 
-export default async function ParentPage() {
+export default async function ParentPage({ searchParams }: { searchParams: { error?: string } }) {
   const supabase = await createClient();
   const { data: { user: supabaseUser } } = await supabase.auth.getUser();
 
-  if (!supabaseUser) return <ParentLoginGate />;
+  if (!supabaseUser) return <ParentLoginGate notRegistered={searchParams.error === "not_registered"} />;
 
   const dbUser = await (prisma.user.findUnique as Function)({
     where: { supabaseId: supabaseUser.id },

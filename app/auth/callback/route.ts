@@ -17,19 +17,17 @@ export async function GET(request: Request) {
   const email = data.user.email!.toLowerCase();
   const next = searchParams.get("next") ?? null;
 
-  // Check if already fully registered
+  // Already registered — just redirect
   const existing = await prisma.user.findUnique({ where: { supabaseId } });
   if (existing) {
     const dest = next ?? (existing.role === "PARENT" ? "/parent" : "/admin");
     return NextResponse.redirect(`${origin}${dest}`);
   }
 
-  // Pre-registered by admin (supabaseId starts with "pre:")
+  // Pre-registered by admin via student form (supabaseId starts with "pre:")
   const preRegistered = await prisma.user.findUnique({ where: { email } });
   if (preRegistered && preRegistered.supabaseId.startsWith("pre:")) {
-    // Stamp in the real Supabase ID
     await prisma.user.update({ where: { id: preRegistered.id }, data: { supabaseId } });
-    // Sync metadata to Supabase
     const admin = createAdminClient();
     await admin.auth.admin.updateUserById(supabaseId, {
       user_metadata: { role: preRegistered.role, fullName: preRegistered.fullName },
@@ -38,7 +36,59 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}${dest}`);
   }
 
-  // Teacher roster check — auto-register if email is on the roster
+  // Parent whitelist check — email in ParentWhitelist = auto-register as PARENT
+  const whitelisted = await (prisma as any).parentWhitelist.findUnique({
+    where: { email },
+    include: { children: true },
+  });
+  if (whitelisted) {
+    const user = await prisma.user.create({
+      data: {
+        supabaseId,
+        email,
+        fullName: whitelisted.parentName,
+        role: "PARENT",
+        phone: whitelisted.phone ?? null,
+        parentProfile: {
+          create: {
+            whatsappNumber: whitelisted.phone ?? "",
+            approved: true,
+            approvedAt: new Date(),
+          },
+        },
+      },
+      include: { parentProfile: true },
+    });
+
+    // Link whitelisted children by matching class if student exists
+    for (const child of whitelisted.children) {
+      const student = await prisma.student.findFirst({
+        where: {
+          fullName: { contains: child.childName, mode: "insensitive" },
+          class: { year: child.classYear, name: child.className },
+        },
+      });
+      if (student && user.parentProfile) {
+        await prisma.parentStudent.upsert({
+          where: { parentId_studentId: { parentId: user.parentProfile.id, studentId: student.id } },
+          update: {},
+          create: { parentId: user.parentProfile.id, studentId: student.id, relation: whitelisted.relation },
+        });
+        await (prisma as any).parentWhitelistChild.update({
+          where: { id: child.id },
+          data: { studentId: student.id },
+        });
+      }
+    }
+
+    const admin = createAdminClient();
+    await admin.auth.admin.updateUserById(supabaseId, {
+      user_metadata: { role: "PARENT", fullName: whitelisted.parentName },
+    });
+    return NextResponse.redirect(`${origin}/parent`);
+  }
+
+  // Teacher roster check
   const roster = await prisma.teacherRoster.findUnique({ where: { email } });
   if (roster) {
     await prisma.user.create({
@@ -66,7 +116,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/admin`);
   }
 
-  // Not pre-registered and not on roster — sign them out and reject
+  // Unknown email — reject
   await supabase.auth.signOut();
-  return NextResponse.redirect(`${origin}/login?error=not_registered`);
+  return NextResponse.redirect(`${origin}/parent?error=not_registered`);
 }

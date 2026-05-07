@@ -440,6 +440,33 @@ model IdeaSubmission {
 }
 
 // ---------------------------------------------------------------------------
+// Parent Whitelist — managed independently, source of truth for parent access
+// ---------------------------------------------------------------------------
+
+model ParentWhitelist {
+  id            String   @id @default(uuid())
+  parentName    String
+  email         String   @unique
+  phone         String?
+  relation      String   // Father, Mother, Guardian
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  children      ParentWhitelistChild[]
+}
+
+model ParentWhitelistChild {
+  id          String @id @default(uuid())
+  childName   String
+  classYear   Int
+  className   String
+  studentId   String?   // optional FK — links once student is in DB
+
+  whitelistId String
+  whitelist   ParentWhitelist @relation(fields: [whitelistId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
 // Timetable
 // ---------------------------------------------------------------------------
 

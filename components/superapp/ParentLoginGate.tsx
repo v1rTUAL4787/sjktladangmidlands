@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Chrome, GraduationCap, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
-export function ParentLoginGate({ notRegistered }: { notRegistered?: boolean }) {
+export function ParentLoginGate({ notRegistered }: { notRegistered?: boolean | string }) {
   const supabase = createClient();
 
   async function handleGoogleLogin() {
