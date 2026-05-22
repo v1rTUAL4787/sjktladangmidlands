@@ -485,3 +485,30 @@ model TimetableSlot {
 
   @@unique([classId, day, period])
 }
+
+// ---------------------------------------------------------------------------
+// Device-managed tables — Prisma must not touch these
+// ---------------------------------------------------------------------------
+
+model attendance_sync {
+  id                 String    @id
+  student_id         String
+  student_name       String?
+  class_name         String?
+  card_no            String?
+  attendance_date    DateTime? @db.Date
+  entry_time         String?
+  entry_timestamp    DateTime?
+  exit_time          String?
+  exit_timestamp     DateTime?
+  status             String?
+  school_name        String?
+  synced_at          DateTime?
+
+  @@ignore
+}
+
+model card_events_test {
+  id         String   @id
+  @@ignore
+}

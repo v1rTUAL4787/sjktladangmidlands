@@ -16,7 +16,7 @@ interface ClassItem { id: string; year: number; name: string }
 interface LinkedParent {
   parentId: string;
   relation: string;
-  parent: { id: string; user: { fullName: string; email: string; phone: string | null } };
+  parent: { id: string; whatsappNumber: string; user: { fullName: string; email: string; phone: string | null } };
 }
 interface StudentItem {
   id: string; fullName: string; cardNo: string | null; gender: string | null; dateOfBirth: string | null; enrolledYear: number;
@@ -26,17 +26,94 @@ interface StudentItem {
 
 interface ParentInput { name: string; email: string; whatsapp: string; relation: string }
 
+function ParentEditRow({ lp, studentId, onSaved }: { lp: LinkedParent; studentId: string; onSaved: (updated: LinkedParent) => void }) {
+  const [editName, setEditName] = useState(lp.parent.user.fullName);
+  const [editRelation, setEditRelation] = useState(lp.relation);
+  const [editWhatsapp, setEditWhatsapp] = useState(lp.parent.whatsappNumber || lp.parent.user.phone || "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSave() {
+    if (!editName.trim()) return;
+    setSaving(true);
+    setError("");
+
+    const res = await fetch(`/api/admin/parents/${lp.parent.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fullName: editName.trim(), relation: editRelation, whatsapp: editWhatsapp.trim(), studentId }),
+    });
+
+    if (res.ok) {
+      onSaved({
+        ...lp,
+        relation: editRelation,
+        parent: {
+          ...lp.parent,
+          whatsappNumber: editWhatsapp.trim(),
+          user: { ...lp.parent.user, fullName: editName.trim(), phone: editWhatsapp.trim() || null },
+        },
+      });
+    } else {
+      const data = await res.json();
+      setError(data.error ?? "Failed to save");
+    }
+    setSaving(false);
+  }
+
+  return (
+    <div className="rounded-md border border-blue-200 bg-blue-50/40 p-3 flex flex-col gap-2.5">
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">Full Name</Label>
+          <Input value={editName} onChange={e => setEditName(e.target.value)} className="h-8 text-sm" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs">Relation</Label>
+          <Select value={editRelation} onValueChange={setEditRelation}>
+            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Mother">Mother</SelectItem>
+              <SelectItem value="Father">Father</SelectItem>
+              <SelectItem value="Guardian">Guardian</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="flex flex-col gap-1">
+        <Label className="text-xs">Email <span className="text-muted-foreground">(cannot be changed — Google login)</span></Label>
+        <Input value={lp.parent.user.email} disabled className="h-8 text-sm bg-muted" />
+      </div>
+      <div className="flex flex-col gap-1">
+        <Label className="text-xs">WhatsApp</Label>
+        <Input value={editWhatsapp} onChange={e => setEditWhatsapp(e.target.value)} placeholder="+601X-XXXXXXX" className="h-8 text-sm" />
+      </div>
+      {error && <p className="text-xs text-red-500">{error}</p>}
+      <div className="flex justify-end gap-2">
+        <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => onSaved(lp)}>Cancel</Button>
+        <Button type="button" size="sm" className="h-7 text-xs" onClick={handleSave} disabled={saving || !editName.trim()}>
+          {saving ? "Saving..." : "Save"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function ParentSection({
   existing,
+  studentId,
   linkedParents,
   onRemoveParent,
+  onUpdateParent,
   newParents,
   onAddParent,
   onRemoveNew,
 }: {
   existing: boolean;
+  studentId?: string;
   linkedParents: LinkedParent[];
   onRemoveParent: (parentId: string) => void;
+  onUpdateParent: (parentId: string, updated: LinkedParent) => void;
   newParents: ParentInput[];
   onAddParent: (p: ParentInput) => void;
   onRemoveNew: (index: number) => void;
@@ -45,6 +122,7 @@ function ParentSection({
   const [email, setEmail] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [relation, setRelation] = useState("Mother");
+  const [editingParentId, setEditingParentId] = useState<string | null>(null);
 
   function addParent() {
     if (!name || !email) return;
@@ -60,16 +138,35 @@ function ParentSection({
         <div className="flex flex-col gap-1.5">
           <p className="text-xs text-muted-foreground font-medium">Linked parents</p>
           {linkedParents.map(lp => (
-            <div key={lp.parent.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <div>
-                <span className="font-medium">{lp.parent.user.fullName}</span>
-                <span className="text-muted-foreground ml-2">({lp.relation})</span>
-                <div className="text-xs text-muted-foreground">{lp.parent.user.email}</div>
-              </div>
-              <Button type="button" size="sm" variant="ghost" className="text-red-500 hover:text-red-600 h-7 w-7 p-0"
-                onClick={() => onRemoveParent(lp.parent.id)}>
-                <X className="h-3.5 w-3.5" />
-              </Button>
+            <div key={lp.parent.id} className="flex flex-col gap-1.5">
+              {editingParentId === lp.parent.id ? (
+                <ParentEditRow
+                  lp={lp}
+                  studentId={studentId!}
+                  onSaved={(updated) => {
+                    if (updated !== lp) onUpdateParent(lp.parent.id, updated);
+                    setEditingParentId(null);
+                  }}
+                />
+              ) : (
+                <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                  <div>
+                    <span className="font-medium">{lp.parent.user.fullName}</span>
+                    <span className="text-muted-foreground ml-2">({lp.relation})</span>
+                    <div className="text-xs text-muted-foreground">{lp.parent.user.email}</div>
+                  </div>
+                  <div className="flex gap-0.5">
+                    <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0"
+                      onClick={() => setEditingParentId(lp.parent.id)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" className="text-red-500 hover:text-red-600 h-7 w-7 p-0"
+                      onClick={() => onRemoveParent(lp.parent.id)}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -155,6 +252,10 @@ function StudentForm({ classes, existing, onDone }: {
   function handleRemoveLinked(parentId: string) {
     setLinkedParents(prev => prev.filter(lp => lp.parent.id !== parentId));
     setRemovedParentIds(prev => [...prev, parentId]);
+  }
+
+  function handleUpdateLinked(parentId: string, updated: LinkedParent) {
+    setLinkedParents(prev => prev.map(lp => lp.parent.id === parentId ? updated : lp));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -244,8 +345,10 @@ function StudentForm({ classes, existing, onDone }: {
 
       <ParentSection
         existing={!!existing}
+        studentId={existing?.id}
         linkedParents={linkedParents}
         onRemoveParent={handleRemoveLinked}
+        onUpdateParent={handleUpdateLinked}
         newParents={newParents}
         onAddParent={p => setNewParents(prev => [...prev, p])}
         onRemoveNew={i => setNewParents(prev => prev.filter((_, idx) => idx !== i))}

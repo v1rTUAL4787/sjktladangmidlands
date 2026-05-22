@@ -11,6 +11,7 @@ export default async function StudentsPage() {
             parent: {
               select: {
                 id: true,
+                whatsappNumber: true,
                 user: { select: { fullName: true, email: true, phone: true } },
               },
             },
