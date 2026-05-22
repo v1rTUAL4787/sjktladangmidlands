@@ -187,6 +187,16 @@ export function ParentDashboard({ parentName, students }: { parentName: string; 
     router.refresh();
   }
 
+  if (!student) return (
+    <div className="min-h-screen bg-gray-50 max-w-md mx-auto flex flex-col items-center justify-center gap-4 px-8">
+      <p className="font-bold text-[#1B3A6B] text-lg text-center">No students linked yet</p>
+      <p className="text-gray-400 text-sm text-center">Your account is registered but no student records have been linked. Please contact the school admin.</p>
+      <button onClick={handleLogout} className="mt-2 flex items-center gap-2 bg-[#1B3A6B] text-white rounded-xl px-6 py-3 text-sm font-semibold">
+        <LogOut className="h-4 w-4" /> Sign out
+      </button>
+    </div>
+  );
+
   const attendanceThisYear = student.attendanceRecords.filter(
     a => new Date(a.date).getFullYear() === new Date().getFullYear()
   );
