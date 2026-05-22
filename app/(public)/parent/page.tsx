@@ -35,7 +35,7 @@ export default async function ParentPage({ searchParams }: { searchParams: { err
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const students = dbUser.parentProfile.students.map((ps: any) => ({
+  const students = dbUser.parentProfile.students.filter((ps: any) => !!ps.student).map((ps: any) => ({
     ...ps.student,
     relation: ps.relation,
     dateOfBirth: ps.student.dateOfBirth?.toISOString() ?? null,
