@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { useSidebar } from "./SidebarContext";
 import {
   LayoutDashboard, BookOpen, Users, GraduationCap, Heart,
-  Megaphone, CalendarDays, ChevronLeft,
+  Megaphone, CalendarDays, ClipboardCheck, ChevronLeft,
 } from "lucide-react";
 
 const links = [
@@ -15,6 +15,7 @@ const links = [
   { href: "/admin/students", icon: Users, label: "Students" },
   { href: "/admin/teachers", icon: GraduationCap, label: "Teachers" },
   { href: "/admin/parents", icon: Heart, label: "Parents" },
+  { href: "/admin/attendance", icon: ClipboardCheck, label: "Attendance" },
   { href: "/admin/announcements", icon: Megaphone, label: "Announcements" },
   { href: "/admin/events", icon: CalendarDays, label: "Events" },
 ];
