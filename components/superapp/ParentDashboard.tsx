@@ -8,7 +8,68 @@ import Link from "next/link";
 import { format, getDaysInMonth } from "date-fns";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const DAYS_LABEL = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+// Selangor 2026 public holidays + school holidays (Kumpulan B)
+const SELANGOR_HOLIDAYS_2026 = new Map<string, string>([
+  ["2026-01-01","New Year's Day"],
+  ["2026-02-01","Thaipusam"],
+  ["2026-02-02","Thaipusam (In Lieu)"],
+  ["2026-02-16","School Holiday"],
+  ["2026-02-17","Chinese New Year"],
+  ["2026-02-18","Chinese New Year (2nd Day)"],
+  ["2026-02-19","School Holiday"],
+  ["2026-02-20","School Holiday"],
+  ["2026-03-07","Nuzul Al-Quran"],
+  ["2026-03-20","Hari Raya Aidilfitri"],
+  ["2026-03-21","Hari Raya Aidilfitri"],
+  ["2026-03-22","Hari Raya Aidilfitri (2nd Day)"],
+  ["2026-03-23","Hari Raya Aidilfitri"],
+  ["2026-03-24","School Holiday"],
+  ["2026-03-25","School Holiday"],
+  ["2026-03-26","School Holiday"],
+  ["2026-03-27","School Holiday"],
+  ["2026-05-01","Labour Day"],
+  ["2026-05-25","School Holiday"],
+  ["2026-05-26","School Holiday"],
+  ["2026-05-27","Hari Raya Haji"],
+  ["2026-05-28","School Holiday"],
+  ["2026-05-29","School Holiday"],
+  ["2026-05-31","Wesak Day"],
+  ["2026-06-01","Yang di-Pertuan Agong's Birthday"],
+  ["2026-06-02","Wesak Day (In Lieu)"],
+  ["2026-06-03","School Holiday"],
+  ["2026-06-04","School Holiday"],
+  ["2026-06-05","School Holiday"],
+  ["2026-06-17","Awal Muharram"],
+  ["2026-08-25","Maulidur Rasul"],
+  ["2026-08-31","Hari Merdeka"],
+  ["2026-09-01","School Holiday"],
+  ["2026-09-02","School Holiday"],
+  ["2026-09-03","School Holiday"],
+  ["2026-09-04","School Holiday"],
+  ["2026-09-16","Malaysia Day"],
+  ["2026-11-08","Deepavali"],
+  ["2026-11-09","Deepavali (In Lieu)"],
+  ["2026-12-07","School Holiday"],
+  ["2026-12-08","School Holiday"],
+  ["2026-12-09","School Holiday"],
+  ["2026-12-10","School Holiday"],
+  ["2026-12-11","Sultan of Selangor's Birthday"],
+  ["2026-12-14","School Holiday"],
+  ["2026-12-15","School Holiday"],
+  ["2026-12-16","School Holiday"],
+  ["2026-12-17","School Holiday"],
+  ["2026-12-18","School Holiday"],
+  ["2026-12-21","School Holiday"],
+  ["2026-12-22","School Holiday"],
+  ["2026-12-23","School Holiday"],
+  ["2026-12-24","School Holiday"],
+  ["2026-12-25","Christmas Day"],
+  ["2026-12-28","School Holiday"],
+  ["2026-12-29","School Holiday"],
+  ["2026-12-30","School Holiday"],
+  ["2026-12-31","School Holiday"],
+]);
 
 const TP_COLORS = [
   "",
@@ -38,10 +99,21 @@ function AttendanceGrid({ records }: { records: AttendanceRecord[] }) {
   const year = new Date().getFullYear();
   const lookup = new Map(records.map(r => [r.date.slice(0, 10), r.present]));
 
+  function getCellStyle(dateStr: string, dayOfWeek: number) {
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const holidayName = SELANGOR_HOLIDAYS_2026.get(dateStr);
+    const val = lookup.get(dateStr);
+
+    if (isWeekend) return { cls: "bg-gray-200 text-gray-400", label: "", title: "Weekend" };
+    if (holidayName) return { cls: "bg-amber-200 text-amber-700", label: "✦", title: holidayName };
+    if (val === true) return { cls: "bg-green-500 text-white", label: "✓", title: "Present" };
+    if (val === false) return { cls: "bg-red-400 text-white", label: "✗", title: "Absent" };
+    return { cls: "bg-gray-100 text-gray-300", label: "", title: dateStr };
+  }
+
   return (
     <div className="overflow-x-auto -mx-1">
       <div className="min-w-max px-1">
-        {/* Day number headers — 1–31 */}
         <div className="flex gap-px mb-1 ml-8">
           {Array.from({ length: 31 }, (_, i) => (
             <div key={i} className="w-6 text-center text-[9px] text-gray-400 font-medium">{i + 1}</div>
@@ -55,21 +127,23 @@ function AttendanceGrid({ records }: { records: AttendanceRecord[] }) {
               {Array.from({ length: 31 }, (_, di) => {
                 if (di >= daysInMonth) return <div key={di} className="w-6 h-6" />;
                 const dateStr = `${year}-${String(mi + 1).padStart(2, "0")}-${String(di + 1).padStart(2, "0")}`;
-                const val = lookup.get(dateStr);
+                const dow = new Date(year, mi, di + 1).getDay();
+                const { cls, label, title } = getCellStyle(dateStr, dow);
                 return (
-                  <div key={di} title={dateStr}
-                    className={`w-6 h-6 rounded-sm text-[9px] flex items-center justify-center font-bold
-                      ${val === true ? "bg-green-500 text-white" : val === false ? "bg-red-400 text-white" : "bg-gray-100 text-gray-300"}`}>
-                    {val === true ? "✓" : val === false ? "✗" : ""}
+                  <div key={di} title={title}
+                    className={`w-6 h-6 rounded-sm text-[9px] flex items-center justify-center font-bold ${cls}`}>
+                    {label}
                   </div>
                 );
               })}
             </div>
           );
         })}
-        <div className="flex gap-4 mt-3 text-xs text-gray-500">
+        <div className="flex flex-wrap gap-3 mt-3 text-xs text-gray-500">
           <span className="flex items-center gap-1"><span className="w-4 h-4 rounded-sm bg-green-500 inline-block" /> Present</span>
           <span className="flex items-center gap-1"><span className="w-4 h-4 rounded-sm bg-red-400 inline-block" /> Absent</span>
+          <span className="flex items-center gap-1"><span className="w-4 h-4 rounded-sm bg-amber-200 inline-block" /> Holiday</span>
+          <span className="flex items-center gap-1"><span className="w-4 h-4 rounded-sm bg-gray-200 inline-block" /> Weekend</span>
           <span className="flex items-center gap-1"><span className="w-4 h-4 rounded-sm bg-gray-100 inline-block" /> No data</span>
         </div>
       </div>
