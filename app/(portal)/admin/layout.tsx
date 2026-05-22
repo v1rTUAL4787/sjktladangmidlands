@@ -9,7 +9,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({ where: { supabaseId: user.id } });
-  if (!dbUser || dbUser.role !== "ADMIN") redirect("/dashboard");
+  if (!dbUser || (dbUser.role !== "ADMIN" && dbUser.role !== "TEACHER")) redirect("/");
 
   return (
     <div className="flex -m-6 min-h-[calc(100vh-4rem)]">
