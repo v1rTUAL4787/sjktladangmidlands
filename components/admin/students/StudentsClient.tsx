@@ -19,7 +19,7 @@ interface LinkedParent {
   parent: { id: string; user: { fullName: string; email: string; phone: string | null } };
 }
 interface StudentItem {
-  id: string; fullName: string; gender: string | null; dateOfBirth: string | null; enrolledYear: number;
+  id: string; fullName: string; cardNo: string | null; gender: string | null; dateOfBirth: string | null; enrolledYear: number;
   class: { year: number; name: string };
   parents: LinkedParent[];
 }
@@ -137,6 +137,7 @@ function StudentForm({ classes, existing, onDone }: {
   const router = useRouter();
   const [fullName, setFullName] = useState(existing?.fullName ?? "");
   const [icNumber, setIcNumber] = useState("");
+  const [cardNo, setCardNo] = useState(existing?.cardNo ?? "");
   const [dob, setDob] = useState(existing?.dateOfBirth ? existing.dateOfBirth.slice(0, 10) : "");
   const [gender, setGender] = useState(existing?.gender ?? "none");
   const [classId, setClassId] = useState(
@@ -166,6 +167,7 @@ function StudentForm({ classes, existing, onDone }: {
 
     const body: Record<string, unknown> = {
       fullName,
+      cardNo: cardNo || null,
       dateOfBirth: dob || null,
       gender: gender === "none" ? null : gender,
       classId,
@@ -209,6 +211,10 @@ function StudentForm({ classes, existing, onDone }: {
           <Input value={icNumber} onChange={e => setIcNumber(e.target.value.replace(/-/g, ""))} placeholder="e.g. 123456789012" required />
         </div>
       )}
+      <div className="flex flex-col gap-1.5">
+        <Label>Card No <span className="text-muted-foreground text-xs">(attendance device ID, e.g. STU001)</span></Label>
+        <Input value={cardNo} onChange={e => setCardNo(e.target.value.trim())} placeholder="e.g. STU001" />
+      </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1.5">
           <Label>Date of Birth</Label>
@@ -280,7 +286,7 @@ function BulkImportForm({ classes, onDone }: { classes: ClassItem[]; onDone: () 
       </p>
       <div className="text-xs bg-muted rounded p-2 space-y-1">
         <p className="font-medium">Required: <code>fullName, icNumber, classId</code></p>
-        <p className="text-muted-foreground">Optional student: <code>dateOfBirth, gender (MALE/FEMALE), enrolledYear</code></p>
+        <p className="text-muted-foreground">Optional student: <code>cardNo, dateOfBirth, gender (MALE/FEMALE), enrolledYear</code></p>
         <p className="text-muted-foreground">Optional parent: <code>parentName, parentEmail, parentRelation, parentWhatsapp</code></p>
         <p className="text-muted-foreground italic">Multiple parents: add columns parentName2, parentEmail2, parentRelation2, parentWhatsapp2 etc.</p>
       </div>
@@ -355,6 +361,7 @@ export function StudentsClient({ students, classes }: { students: StudentItem[];
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Class</TableHead>
+              <TableHead>Card No</TableHead>
               <TableHead>Gender</TableHead>
               <TableHead>Date of Birth</TableHead>
               <TableHead>Parents</TableHead>
@@ -363,12 +370,13 @@ export function StudentsClient({ students, classes }: { students: StudentItem[];
           </TableHeader>
           <TableBody>
             {filtered.length === 0 && (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No students found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No students found.</TableCell></TableRow>
             )}
             {filtered.map(s => (
               <TableRow key={s.id}>
                 <TableCell className="font-medium">{s.fullName}</TableCell>
                 <TableCell>Year {s.class.year}{s.class.name}</TableCell>
+                <TableCell><code className="text-xs">{s.cardNo ?? "—"}</code></TableCell>
                 <TableCell>{s.gender ? <Badge variant="secondary">{s.gender}</Badge> : "—"}</TableCell>
                 <TableCell>{s.dateOfBirth ? format(new Date(s.dateOfBirth), "dd MMM yyyy") : "—"}</TableCell>
                 <TableCell className="text-xs">

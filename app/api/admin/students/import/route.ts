@@ -28,6 +28,7 @@ export async function POST(req: Request) {
       const fullName = String(row["fullName"] ?? row["Full Name"] ?? "").trim();
       const icNumber = String(row["icNumber"] ?? row["IC Number"] ?? "").trim().replace(/-/g, "");
       const classId = String(row["classId"] ?? row["Class ID"] ?? "").trim();
+      const cardNo = String(row["cardNo"] ?? row["Card No"] ?? row["card_no"] ?? "").trim() || null;
       const gender = String(row["gender"] ?? row["Gender"] ?? "").trim().toUpperCase();
       const rawDob = row["dateOfBirth"] ?? row["Date of Birth"];
       const enrolledYear = parseInt(String(row["enrolledYear"] ?? row["Enrolled Year"] ?? new Date().getFullYear()));
@@ -47,11 +48,12 @@ export async function POST(req: Request) {
 
       const student = await prisma.student.upsert({
         where: { icNumberHash: hash },
-        update: { fullName, dateOfBirth: dob, gender: (gender === "MALE" || gender === "FEMALE") ? gender as "MALE" | "FEMALE" : null, classId },
+        update: { fullName, cardNo, dateOfBirth: dob, gender: (gender === "MALE" || gender === "FEMALE") ? gender as "MALE" | "FEMALE" : null, classId },
         create: {
           fullName,
           icNumberHash: hash,
           icNumberEncrypted: encryptIC(icNumber),
+          cardNo,
           dateOfBirth: dob,
           gender: (gender === "MALE" || gender === "FEMALE") ? gender as "MALE" | "FEMALE" : null,
           classId,

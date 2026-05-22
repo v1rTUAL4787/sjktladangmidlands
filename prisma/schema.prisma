@@ -107,6 +107,7 @@ model Student {
   icNumberHash      String   @unique
   icNumberEncrypted String
   fullName          String
+  cardNo            String?  @unique
   dateOfBirth       DateTime?
   gender            Gender?
   enrolledYear      Int

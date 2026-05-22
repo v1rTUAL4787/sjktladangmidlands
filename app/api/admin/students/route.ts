@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   const auth = await requireAdmin();
   if (auth instanceof NextResponse) return auth;
 
-  const { fullName, icNumber, dateOfBirth, gender, classId, enrolledYear, parents } = await req.json();
+  const { fullName, icNumber, cardNo, dateOfBirth, gender, classId, enrolledYear, parents } = await req.json();
   if (!fullName || !icNumber || !classId) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
   const hash = hashIC(icNumber);
@@ -39,6 +39,7 @@ export async function POST(req: Request) {
       fullName,
       icNumberHash: hash,
       icNumberEncrypted: encryptIC(icNumber),
+      cardNo: cardNo?.trim() || null,
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
       gender: gender || null,
       classId,

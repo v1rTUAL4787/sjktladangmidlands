@@ -7,11 +7,11 @@ export async function PUT(req: Request, { params }: { params: { studentId: strin
   const auth = await requireAdmin();
   if (auth instanceof NextResponse) return auth;
 
-  const { fullName, dateOfBirth, gender, classId, parents, removeParentIds } = await req.json();
+  const { fullName, cardNo, dateOfBirth, gender, classId, parents, removeParentIds } = await req.json();
 
   const student = await prisma.student.update({
     where: { id: params.studentId },
-    data: { fullName, dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null, gender: gender || null, classId },
+    data: { fullName, cardNo: cardNo?.trim() || null, dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null, gender: gender || null, classId },
   });
 
   // Unlink removed parents
