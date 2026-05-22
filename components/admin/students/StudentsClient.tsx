@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Upload, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, X, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 
 interface ClassItem { id: string; year: number; name: string }
@@ -25,95 +25,23 @@ interface StudentItem {
 }
 
 interface ParentInput { name: string; email: string; whatsapp: string; relation: string }
-
-function ParentEditRow({ lp, studentId, onSaved }: { lp: LinkedParent; studentId: string; onSaved: (updated: LinkedParent) => void }) {
-  const [editName, setEditName] = useState(lp.parent.user.fullName);
-  const [editRelation, setEditRelation] = useState(lp.relation);
-  const [editWhatsapp, setEditWhatsapp] = useState(lp.parent.whatsappNumber || lp.parent.user.phone || "");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-
-  async function handleSave() {
-    if (!editName.trim()) return;
-    setSaving(true);
-    setError("");
-
-    const res = await fetch(`/api/admin/parents/${lp.parent.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fullName: editName.trim(), relation: editRelation, whatsapp: editWhatsapp.trim(), studentId }),
-    });
-
-    if (res.ok) {
-      onSaved({
-        ...lp,
-        relation: editRelation,
-        parent: {
-          ...lp.parent,
-          whatsappNumber: editWhatsapp.trim(),
-          user: { ...lp.parent.user, fullName: editName.trim(), phone: editWhatsapp.trim() || null },
-        },
-      });
-    } else {
-      const data = await res.json();
-      setError(data.error ?? "Failed to save");
-    }
-    setSaving(false);
-  }
-
-  return (
-    <div className="rounded-md border border-blue-200 bg-blue-50/40 p-3 flex flex-col gap-2.5">
-      <div className="grid grid-cols-2 gap-2.5">
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs">Full Name</Label>
-          <Input value={editName} onChange={e => setEditName(e.target.value)} className="h-8 text-sm" />
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs">Relation</Label>
-          <Select value={editRelation} onValueChange={setEditRelation}>
-            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Mother">Mother</SelectItem>
-              <SelectItem value="Father">Father</SelectItem>
-              <SelectItem value="Guardian">Guardian</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="flex flex-col gap-1">
-        <Label className="text-xs">Email <span className="text-muted-foreground">(cannot be changed — Google login)</span></Label>
-        <Input value={lp.parent.user.email} disabled className="h-8 text-sm bg-muted" />
-      </div>
-      <div className="flex flex-col gap-1">
-        <Label className="text-xs">WhatsApp</Label>
-        <Input value={editWhatsapp} onChange={e => setEditWhatsapp(e.target.value)} placeholder="+601X-XXXXXXX" className="h-8 text-sm" />
-      </div>
-      {error && <p className="text-xs text-red-500">{error}</p>}
-      <div className="flex justify-end gap-2">
-        <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => onSaved(lp)}>Cancel</Button>
-        <Button type="button" size="sm" className="h-7 text-xs" onClick={handleSave} disabled={saving || !editName.trim()}>
-          {saving ? "Saving..." : "Save"}
-        </Button>
-      </div>
-    </div>
-  );
-}
+interface ParentEdit { fullName: string; relation: string; whatsapp: string }
 
 function ParentSection({
   existing,
-  studentId,
   linkedParents,
   onRemoveParent,
-  onUpdateParent,
+  editedParents,
+  onEditParent,
   newParents,
   onAddParent,
   onRemoveNew,
 }: {
   existing: boolean;
-  studentId?: string;
   linkedParents: LinkedParent[];
   onRemoveParent: (parentId: string) => void;
-  onUpdateParent: (parentId: string, updated: LinkedParent) => void;
+  editedParents: Map<string, ParentEdit>;
+  onEditParent: (parentId: string, edit: ParentEdit) => void;
   newParents: ParentInput[];
   onAddParent: (p: ParentInput) => void;
   onRemoveNew: (index: number) => void;
@@ -122,7 +50,7 @@ function ParentSection({
   const [email, setEmail] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [relation, setRelation] = useState("Mother");
-  const [editingParentId, setEditingParentId] = useState<string | null>(null);
+  const [expandedParentId, setExpandedParentId] = useState<string | null>(null);
 
   function addParent() {
     if (!name || !email) return;
@@ -137,28 +65,29 @@ function ParentSection({
       {existing && linkedParents.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <p className="text-xs text-muted-foreground font-medium">Linked parents</p>
-          {linkedParents.map(lp => (
-            <div key={lp.parent.id} className="flex flex-col gap-1.5">
-              {editingParentId === lp.parent.id ? (
-                <ParentEditRow
-                  lp={lp}
-                  studentId={studentId!}
-                  onSaved={(updated) => {
-                    if (updated !== lp) onUpdateParent(lp.parent.id, updated);
-                    setEditingParentId(null);
-                  }}
-                />
-              ) : (
-                <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+          {linkedParents.map(lp => {
+            const edit = editedParents.get(lp.parent.id) ?? {
+              fullName: lp.parent.user.fullName,
+              relation: lp.relation,
+              whatsapp: lp.parent.whatsappNumber || lp.parent.user.phone || "",
+            };
+            const isExpanded = expandedParentId === lp.parent.id;
+            const isDirty = editedParents.has(lp.parent.id);
+
+            return (
+              <div key={lp.parent.id} className={`rounded-md border text-sm ${isDirty ? "border-blue-300 bg-blue-50/30" : ""}`}>
+                {/* Parent row header */}
+                <div className="flex items-center justify-between px-3 py-2">
                   <div>
-                    <span className="font-medium">{lp.parent.user.fullName}</span>
-                    <span className="text-muted-foreground ml-2">({lp.relation})</span>
+                    <span className="font-medium">{edit.fullName}</span>
+                    <span className="text-muted-foreground ml-2">({edit.relation})</span>
+                    {isDirty && <span className="ml-2 text-[10px] text-blue-500 font-medium">edited</span>}
                     <div className="text-xs text-muted-foreground">{lp.parent.user.email}</div>
                   </div>
                   <div className="flex gap-0.5">
                     <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0"
-                      onClick={() => setEditingParentId(lp.parent.id)}>
-                      <Pencil className="h-3.5 w-3.5" />
+                      onClick={() => setExpandedParentId(isExpanded ? null : lp.parent.id)}>
+                      {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
                     </Button>
                     <Button type="button" size="sm" variant="ghost" className="text-red-500 hover:text-red-600 h-7 w-7 p-0"
                       onClick={() => onRemoveParent(lp.parent.id)}>
@@ -166,9 +95,43 @@ function ParentSection({
                     </Button>
                   </div>
                 </div>
-              )}
-            </div>
-          ))}
+
+                {/* Inline edit fields — no save button, changes held in state until Update */}
+                {isExpanded && (
+                  <div className="px-3 pb-3 flex flex-col gap-2.5 border-t">
+                    <div className="grid grid-cols-2 gap-2.5 mt-2.5">
+                      <div className="flex flex-col gap-1">
+                        <Label className="text-xs">Full Name</Label>
+                        <Input value={edit.fullName} className="h-8 text-sm"
+                          onChange={e => onEditParent(lp.parent.id, { ...edit, fullName: e.target.value })} />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <Label className="text-xs">Relation</Label>
+                        <Select value={edit.relation} onValueChange={v => onEditParent(lp.parent.id, { ...edit, relation: v })}>
+                          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Mother">Mother</SelectItem>
+                            <SelectItem value="Father">Father</SelectItem>
+                            <SelectItem value="Guardian">Guardian</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Label className="text-xs">Email <span className="text-muted-foreground">(cannot be changed — Google login)</span></Label>
+                      <Input value={lp.parent.user.email} disabled className="h-8 text-sm bg-muted" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Label className="text-xs">WhatsApp</Label>
+                      <Input value={edit.whatsapp} placeholder="+601X-XXXXXXX" className="h-8 text-sm"
+                        onChange={e => onEditParent(lp.parent.id, { ...edit, whatsapp: e.target.value })} />
+                    </div>
+                    <p className="text-[11px] text-blue-500">Changes will be saved when you click Update below.</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -244,6 +207,7 @@ function StudentForm({ classes, existing, onDone }: {
   const [linkedParents, setLinkedParents] = useState<LinkedParent[]>(existing?.parents ?? []);
   const [removedParentIds, setRemovedParentIds] = useState<string[]>([]);
   const [newParents, setNewParents] = useState<ParentInput[]>([]);
+  const [editedParents, setEditedParents] = useState<Map<string, ParentEdit>>(new Map());
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -252,16 +216,28 @@ function StudentForm({ classes, existing, onDone }: {
   function handleRemoveLinked(parentId: string) {
     setLinkedParents(prev => prev.filter(lp => lp.parent.id !== parentId));
     setRemovedParentIds(prev => [...prev, parentId]);
+    setEditedParents(prev => { const m = new Map(prev); m.delete(parentId); return m; });
   }
 
-  function handleUpdateLinked(parentId: string, updated: LinkedParent) {
-    setLinkedParents(prev => prev.map(lp => lp.parent.id === parentId ? updated : lp));
+  function handleEditParent(parentId: string, edit: ParentEdit) {
+    setEditedParents(prev => new Map(prev).set(parentId, edit));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!existing && !icNumber) { setError("IC Number is required"); return; }
     setLoading(true); setError(""); setSuccess("");
+
+    // Save parent edits first (parallel)
+    if (editedParents.size > 0 && existing) {
+      await Promise.all(Array.from(editedParents.entries()).map(([parentId, edit]) =>
+        fetch(`/api/admin/parents/${parentId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fullName: edit.fullName, relation: edit.relation, whatsapp: edit.whatsapp, studentId: existing.id }),
+        })
+      ));
+    }
 
     const url = existing ? `/api/admin/students/${existing.id}` : "/api/admin/students";
     const method = existing ? "PUT" : "POST";
@@ -345,10 +321,10 @@ function StudentForm({ classes, existing, onDone }: {
 
       <ParentSection
         existing={!!existing}
-        studentId={existing?.id}
         linkedParents={linkedParents}
         onRemoveParent={handleRemoveLinked}
-        onUpdateParent={handleUpdateLinked}
+        editedParents={editedParents}
+        onEditParent={handleEditParent}
         newParents={newParents}
         onAddParent={p => setNewParents(prev => [...prev, p])}
         onRemoveNew={i => setNewParents(prev => prev.filter((_, idx) => idx !== i))}
@@ -384,9 +360,7 @@ function BulkImportForm({ classes, onDone }: { classes: ClassItem[]; onDone: () 
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-muted-foreground">
-        Upload an Excel file with columns:
-      </p>
+      <p className="text-sm text-muted-foreground">Upload an Excel file with columns:</p>
       <div className="text-xs bg-muted rounded p-2 space-y-1">
         <p className="font-medium">Required: <code>fullName, icNumber, classId</code></p>
         <p className="text-muted-foreground">Optional student: <code>cardNo, dateOfBirth, gender (MALE/FEMALE), enrolledYear</code></p>
