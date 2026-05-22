@@ -17,8 +17,11 @@ export async function GET(request: Request) {
   const email = data.user.email!.toLowerCase();
   const next = searchParams.get("next") ?? null;
 
+  console.log("[auth/callback] email:", email, "supabaseId:", supabaseId);
+
   // Already registered — just redirect
   const existing = await prisma.user.findUnique({ where: { supabaseId }, include: { parentProfile: true } });
+  console.log("[auth/callback] existing by supabaseId:", existing?.id ?? "null", "role:", existing?.role ?? "null");
   if (existing) {
     // Orphaned PARENT row (no profile) — delete so whitelist re-registers cleanly
     if (existing.role === "PARENT" && !existing.parentProfile) {
@@ -31,6 +34,7 @@ export async function GET(request: Request) {
 
   // Pre-registered by admin via student form (supabaseId starts with "pre:")
   const preRegistered = await prisma.user.findUnique({ where: { email } });
+  console.log("[auth/callback] preRegistered by email:", preRegistered?.id ?? "null");
   if (preRegistered && preRegistered.supabaseId.startsWith("pre:")) {
     await prisma.user.update({ where: { id: preRegistered.id }, data: { supabaseId } });
     const admin = createAdminClient();
@@ -46,6 +50,7 @@ export async function GET(request: Request) {
     id: string; parentName: string; email: string; phone: string | null; relation: string;
   }>>`SELECT id, "parentName", email, phone, relation FROM "ParentWhitelist" WHERE email = ${email} LIMIT 1`;
   const whitelisted = whitelistRows[0] ?? null;
+  console.log("[auth/callback] whitelist rows count:", whitelistRows.length, "whitelisted:", whitelisted?.parentName ?? "null");
 
   if (whitelisted) {
     const childRows = await prisma.$queryRaw<Array<{
@@ -124,6 +129,7 @@ export async function GET(request: Request) {
   }
 
   // Unknown email — reject
+  console.log("[auth/callback] REJECTED — no match for email:", email);
   await supabase.auth.signOut();
   return NextResponse.redirect(`${origin}/parent?error=not_registered`);
 }
