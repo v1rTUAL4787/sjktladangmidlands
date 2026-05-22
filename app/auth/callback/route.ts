@@ -19,17 +19,38 @@ export async function GET(request: Request) {
 
   console.log("[auth/callback] email:", email, "supabaseId:", supabaseId);
 
-  // Already registered — just redirect
+  // Already registered — check if they also need a parentProfile attached (e.g. admin who is also a parent)
   const existing = await prisma.user.findUnique({ where: { supabaseId }, include: { parentProfile: true } });
   console.log("[auth/callback] existing by supabaseId:", existing?.id ?? "null", "role:", existing?.role ?? "null");
   if (existing) {
-    // Orphaned PARENT row (no profile) — delete so whitelist re-registers cleanly
-    if (existing.role === "PARENT" && !existing.parentProfile) {
-      await prisma.user.delete({ where: { supabaseId } });
-    } else {
-      const dest = next ?? (existing.role === "PARENT" ? "/parent" : "/admin");
-      return NextResponse.redirect(`${origin}${dest}`);
+    if (!existing.parentProfile) {
+      // Check whitelist — might be an admin/teacher who is also a parent
+      const wRows = await prisma.$queryRaw<Array<{ id: string; parentName: string; phone: string | null; relation: string }>>`
+        SELECT id, "parentName", phone, relation FROM "ParentWhitelist" WHERE email = ${email} LIMIT 1`;
+      const w = wRows[0] ?? null;
+      if (w) {
+        const childRows = await prisma.$queryRaw<Array<{ id: string; childName: string; classYear: number; className: string }>>`
+          SELECT id, "childName", "classYear", "className" FROM "ParentWhitelistChild" WHERE "whitelistId" = ${w.id}`;
+        const profile = await prisma.parentProfile.create({
+          data: { userId: existing.id, whatsappNumber: w.phone ?? "", approved: true, approvedAt: new Date() },
+        });
+        for (const child of childRows) {
+          const student = await prisma.student.findFirst({
+            where: { fullName: { contains: child.childName, mode: "insensitive" }, class: { year: child.classYear, name: child.className } },
+          });
+          if (student) {
+            await prisma.parentStudent.upsert({
+              where: { parentId_studentId: { parentId: profile.id, studentId: student.id } },
+              update: {},
+              create: { parentId: profile.id, studentId: student.id, relation: w.relation },
+            });
+          }
+        }
+        return NextResponse.redirect(`${origin}/parent`);
+      }
     }
+    const dest = next ?? (existing.role === "PARENT" ? "/parent" : "/admin");
+    return NextResponse.redirect(`${origin}${dest}`);
   }
 
   // Pre-registered by admin via student form (supabaseId starts with "pre:")

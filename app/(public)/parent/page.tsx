@@ -30,7 +30,7 @@ export default async function ParentPage({ searchParams }: { searchParams: { err
     },
   });
 
-  if (!dbUser || dbUser.role !== "PARENT" || !dbUser.parentProfile) {
+  if (!dbUser || !dbUser.parentProfile) {
     return <ParentLoginGate notRegistered />;
   }
 
